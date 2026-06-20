@@ -148,6 +148,63 @@
     .wxBoatGroup, .wxSunRays, .wxSeaA, .wxSeaB{animation:none;}
   }
 
+  /* ---- Sun & Moon scene ---- */
+  .sunWrap{padding:14px 16px 0;}
+  .sunCard{background:var(--card2); border:1px solid var(--line); border-radius:16px; padding:14px;}
+  .sunCard .label{font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--sub); margin-bottom:10px;}
+  .sunScene{width:100%; border-radius:12px; overflow:hidden;}
+  .sunScene svg{width:100%; height:auto; display:block;}
+  .sunTimes{display:flex; justify-content:space-around; margin-top:12px; flex-wrap:wrap; gap:8px;}
+  .sunBlk{display:flex; align-items:center; gap:8px;}
+  .sunBlk .sunIco{font-size:22px;}
+  .sunBlk .sunT{font-size:15px; font-weight:700;}
+  .sunBlk .sunL{font-size:10.5px; color:var(--sub); text-transform:uppercase; letter-spacing:.4px;}
+  .sunChar{animation:sunBob 4s ease-in-out infinite;}
+  @keyframes sunBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+  .sunGlasses{animation:glassGlint 3.5s ease-in-out infinite;}
+  @keyframes glassGlint{0%,88%,100%{opacity:1;}94%{opacity:0.5;}}
+  .moonChar{animation:moonBob 5s ease-in-out infinite;}
+  @keyframes moonBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
+  .zzz{animation:zzzFloat 3.2s ease-in-out infinite; opacity:0;}
+  @keyframes zzzFloat{0%{opacity:0; transform:translate(0,0) scale(0.8);}25%{opacity:1;}100%{opacity:0; transform:translate(7px,-12px) scale(1.1);}}
+  .hideCloud{animation:cloudShy 6s ease-in-out infinite;}
+  @keyframes cloudShy{0%,100%{transform:translateX(0);}50%{transform:translateX(7px);}}
+  .twinkle{animation:twk 2.5s ease-in-out infinite;}
+  @keyframes twk{0%,100%{opacity:0.25;}50%{opacity:1;}}
+  @media (prefers-reduced-motion: reduce){
+    .sunChar,.sunGlasses,.moonChar,.zzz,.hideCloud,.twinkle{animation:none; opacity:1;}
+  }
+
+  /* ---- Legend ---- */
+  .legendWrap{padding:14px 16px 0;}
+  .legendCard{background:var(--card2); border:1px solid var(--line); border-radius:16px; padding:14px;}
+  .legendCard .label{font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--sub); margin-bottom:12px;}
+  .legendRow{display:flex; align-items:center; gap:9px; font-size:13px; color:var(--txt); padding:5px 0; line-height:1.35;}
+  .legendRow b{font-weight:700;}
+  .legDot{width:11px; height:11px; border-radius:50%; flex:0 0 auto;}
+  .legBoat{font-size:16px; flex:0 0 auto; display:inline-block; transform-origin:center bottom;}
+  .legCalm{animation:legRcalm 4s ease-in-out infinite;}
+  .legGood{animation:legR 3s ease-in-out infinite;}
+  .legCaut{animation:legR 2s ease-in-out infinite;}
+  .legRough{animation:legR 1.1s ease-in-out infinite;}
+  .legStorm{animation:legR 0.6s ease-in-out infinite;}
+  @keyframes legR{0%,100%{transform:rotate(-7deg);}50%{transform:rotate(7deg);}}
+  @keyframes legRcalm{0%,100%{transform:rotate(-2deg);}50%{transform:rotate(2deg);}}
+  @media (prefers-reduced-motion: reduce){
+    .legCalm,.legGood,.legCaut,.legRough,.legStorm{animation:none;}
+  }
+
+  /* ---- Alerts ---- */
+  .alertWrap{padding:14px 16px 0;}
+  .alertCard{background:var(--card2); border:1px solid var(--line); border-radius:16px; padding:14px;}
+  .alertCard .label{font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--sub); margin-bottom:10px;}
+  .alertBody{font-size:13.5px; line-height:1.5; color:var(--sub);}
+  .alertItem{background:rgba(255,77,109,0.12); border:1px solid rgba(255,77,109,0.4); border-radius:10px; padding:11px 12px; margin-bottom:8px;}
+  .alertItem .aTitle{font-weight:700; color:#ff9f8a; font-size:14px; margin-bottom:3px;}
+  .alertItem .aDesc{font-size:12.5px; color:var(--txt); line-height:1.45;}
+  .alertClear{display:flex; align-items:center; gap:8px; color:#3ddc97; font-weight:600;}
+  .alertClear .chk{font-size:18px;}
+
   /* ---- Boat-o-meter: kid-friendly conditions animation ---- */
   .boatScene{position:relative; height:120px; margin:10px 0 4px; border-radius:12px; overflow:hidden;
              background:linear-gradient(180deg,#0e2940 0%,#0c3350 55%,#0a3a5e 100%);}
@@ -336,6 +393,31 @@
   </div>
 </div>
 
+<div class="sunWrap">
+  <div class="sunCard">
+    <div class="label">Sun &amp; Moon Today</div>
+    <div class="sunScene" id="sunScene">
+      <svg id="sunSky" viewBox="0 0 320 120" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="sunTimes" id="sunTimes">
+      <div class="sunBlk"><div class="sunIco">🌅</div><div><div class="sunT" id="sunriseT">--:--</div><div class="sunL">Sunrise</div></div></div>
+      <div class="sunBlk"><div class="sunIco">🌇</div><div><div class="sunT" id="sunsetT">--:--</div><div class="sunL">Sunset</div></div></div>
+      <div class="sunBlk"><div class="sunIco">☀️</div><div><div class="sunT" id="daylightT">--</div><div class="sunL">Daylight</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="legendWrap">
+  <div class="legendCard">
+    <div class="label">Boating Outlook Legend</div>
+    <div class="legendRow"><span class="legDot" style="background:#3ddc97"></span><span class="legBoat legCalm">⛵</span><b style="color:#3ddc97">Great day</b> — calm to light ripple, under ~10 kts</div>
+    <div class="legendRow"><span class="legDot" style="background:#7fd4ff"></span><span class="legBoat legGood">⛵</span><b style="color:#7fd4ff">Good</b> — light chop, comfortable for most boats</div>
+    <div class="legendRow"><span class="legDot" style="background:#ffd166"></span><span class="legBoat legCaut">⛵</span><b style="color:#ffd166">Caution</b> — choppy, small craft will feel it</div>
+    <div class="legendRow"><span class="legDot" style="background:#ff9f43"></span><span class="legBoat legRough">⛵</span><b style="color:#ff9f43">Rough</b> — whitecaps, experienced boaters only</div>
+    <div class="legendRow"><span class="legDot" style="background:#ff4d6d"></span><span class="legBoat legStorm">⛵</span><b style="color:#ff4d6d">Stay home</b> — dangerous, small craft warning territory</div>
+  </div>
+</div>
+
 <div class="sparkWrap">
   <div class="sparkCard">
     <div class="label">Wind Speed — last 24h</div>
@@ -347,11 +429,19 @@
   <div class="logCard" id="logCard"></div>
 </div>
 
+<div class="alertWrap">
+  <div class="alertCard" id="alertCard">
+    <div class="label">⚠️ Environment Canada Alerts</div>
+    <div id="alertBody" class="alertBody">Checking for marine warnings…</div>
+  </div>
+</div>
+
+
 
 <footer>
   Data from NOAA NDBC, buoys owned &amp; maintained by Environment and Climate Change Canada.<br>
   Auto-refreshes every 10 min. Tap a station above to switch.<br>
-  <span style="opacity:0.6">build v5 · 2026-06-20</span>
+  <span style="opacity:0.6">build v6 · 2026-06-20</span>
 </footer>
 
 <script>
@@ -359,25 +449,25 @@
   const STATIONS = {
     '45151': {name:'Lake Simcoe Buoy', sub:'Station 45151 · Lake Simcoe, mid-lake',
               lat:44.50, lon:-79.37,
-              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=11&siteID=05505', ecccLabel:'ECCC marine forecast (nearest: S. Georgian Bay)'},
+              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=11&siteID=08300', ecccLabel:'ECCC marine forecast — Lake Simcoe', alertFeed:'https://weather.gc.ca/rss/marine/08300_e.xml'},
     '45143': {name:'South Georgian Bay', sub:'Station 45143 · near Wasaga Beach / Collingwood',
               lat:44.94, lon:-80.63,
-              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=11&siteID=05505', ecccLabel:'ECCC marine forecast — Southern Georgian Bay'},
+              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=11&siteID=05505', ecccLabel:'ECCC marine forecast — Southern Georgian Bay', alertFeed:'https://weather.gc.ca/rss/marine/05505_e.xml'},
     '45137': {name:'Georgian Bay', sub:'Station 45137 · open water, North Channel approach',
               lat:45.54, lon:-81.01,
-              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=11&siteID=05500', ecccLabel:'ECCC marine forecast — Georgian Bay'},
+              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=11&siteID=05500', ecccLabel:'ECCC marine forecast — Georgian Bay', alertFeed:'https://weather.gc.ca/rss/marine/05500_e.xml'},
     '45154': {name:'North Channel East', sub:'Station 45154 · near Killarney / Manitoulin',
               lat:46.00, lon:-81.60,
-              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=11&siteID=05500', ecccLabel:'ECCC marine forecast — Georgian Bay / North Channel'},
+              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=11&siteID=10200', ecccLabel:'ECCC marine forecast — North Channel', alertFeed:'https://weather.gc.ca/rss/marine/10200_e.xml'},
     '45152': {name:'Lake Nipissing', sub:'Station 45152 · French River watershed',
               lat:46.28, lon:-79.78,
-              eccc:'https://weather.gc.ca/marine/index_e.html', ecccLabel:'ECCC marine forecasts index'},
+              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=11&siteID=08000', ecccLabel:'ECCC marine forecast — Lake Nipissing', alertFeed:'https://weather.gc.ca/rss/marine/08000_e.xml'},
     '45149': {name:'Southern Lake Huron', sub:'Station 45149 · near Sarnia / Lake Huron exit',
               lat:43.00, lon:-82.10,
-              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=10&siteID=05510', ecccLabel:'ECCC marine forecast — Lake Huron'},
+              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=11&siteID=07605', ecccLabel:'ECCC marine forecast — Southern Lake Huron', alertFeed:'https://weather.gc.ca/rss/marine/07605_e.xml'},
     '45139': {name:'West Lake Ontario', sub:'Station 45139 · Grimsby, west Lake Ontario',
               lat:43.22, lon:-79.55,
-              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=12&siteID=05600', ecccLabel:'ECCC marine forecast — Lake Ontario'}
+              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=11&siteID=08207', ecccLabel:'ECCC marine forecast — Western Lake Ontario', alertFeed:'https://weather.gc.ca/rss/marine/08207_e.xml'}
   };
 
   const select = document.getElementById('stationSelect');
@@ -817,6 +907,7 @@
 
   // ---------- Canadian GEM boating outlook (Open-Meteo, no key, CORS-friendly) ----------
   let fcData = null;
+  let sunData = null;
 
   function degToCompassShort(deg){
     const d = dirText(deg);
@@ -872,6 +963,88 @@
     } catch (err) {
       $('fcHeadline').textContent = '';
       $('fcHeadline').innerHTML = `Couldn't load the GEM forecast right now (${err.message}). The live buoy reading above still works — and the official ECCC button below is always available.`;
+    }
+  }
+
+  // Fetches Environment Canada's per-area marine ATOM feed and shows any
+  // active warnings/watches. The feed is XML; we try direct first, then the
+  // same proxy chain the buoy data uses (ECCC doesn't send CORS headers).
+  async function fetchAlerts(station){
+    const info = STATIONS[station];
+    const body = $('alertBody');
+    if (!info || !info.alertFeed){ if (body) body.innerHTML = '<div class="alertClear"><span class="chk">✓</span> No alert feed for this station.</div>'; return; }
+    if (body) body.textContent = 'Checking for marine warnings…';
+
+    const feedUrl = info.alertFeed;
+    let xmlText = null;
+    const attempts = [feedUrl, ...PROXIES.map(p => p(feedUrl))];
+    for (const u of attempts){
+      try {
+        const res = await fetchWithTimeout(u, 6000);
+        if (!res.ok) throw new Error('status ' + res.status);
+        const t = await res.text();
+        if (t && t.indexOf('<') !== -1 && /feed|entry|rss|title/i.test(t)){ xmlText = t; break; }
+      } catch(e){ /* try next source */ }
+    }
+
+    if (!xmlText){
+      if (body) body.innerHTML = `Couldn't reach the alert feed right now. Check <a href="${info.eccc}" target="_blank" rel="noopener" style="color:#7fd4ff">the official ECCC page</a> directly.`;
+      return;
+    }
+
+    try {
+      const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+      let entries = Array.from(doc.getElementsByTagName('entry'));
+      if (!entries.length) entries = Array.from(doc.getElementsByTagName('item'));
+
+      const hits = [];
+      for (const e of entries){
+        const titleEl = e.getElementsByTagName('title')[0];
+        const summEl = e.getElementsByTagName('summary')[0] || e.getElementsByTagName('description')[0];
+        const title = titleEl ? titleEl.textContent.trim() : '';
+        const summ = summEl ? summEl.textContent.trim() : '';
+        const lc = (title + ' ' + summ).toLowerCase();
+        const isAlert = /(warning|watch|advisory|special marine|strong wind|gale|storm|squall)/.test(lc);
+        const noneInEffect = /no watches or warnings|no warnings|ended for the season|aucun/.test(lc);
+        if (isAlert && !noneInEffect){
+          hits.push({ title: title.replace(/\s+/g,' '), desc: summ.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0, 240) });
+        }
+      }
+
+      if (!hits.length){
+        if (body) body.innerHTML = `<div class="alertClear"><span class="chk">✓</span> No active marine warnings for ${info.name}.</div>`;
+      } else {
+        if (body) body.innerHTML = hits.map(h =>
+          `<div class="alertItem"><div class="aTitle">⚠️ ${h.title}</div>${h.desc ? `<div class="aDesc">${h.desc}${h.desc.length >= 240 ? '…' : ''}</div>` : ''}</div>`
+        ).join('') + `<div style="margin-top:6px; font-size:11.5px;"><a href="${info.eccc}" target="_blank" rel="noopener" style="color:#7fd4ff">Full bulletin on weather.gc.ca ↗</a></div>`;
+      }
+    } catch(err){
+      if (body) body.innerHTML = `Couldn't parse the alert feed. Check <a href="${info.eccc}" target="_blank" rel="noopener" style="color:#7fd4ff">the official ECCC page</a>.`;
+    }
+  }
+
+  // Sun/moon times come from the STANDARD forecast endpoint (not /v1/gem),
+  // because the GEM endpoint doesn't reliably expose the sunrise/sunset/
+  // daylight daily fields. Keeping it a separate call means a hiccup here
+  // never breaks the wind forecast or the live buoy reading.
+  async function fetchSun(station){
+    const info = STATIONS[station];
+    if (!info || info.lat == null) return;
+    const params = new URLSearchParams({
+      latitude: info.lat, longitude: info.lon,
+      daily: 'sunrise,sunset,daylight_duration,weather_code',
+      timezone: 'America/Toronto',
+      forecast_days: '1'
+    });
+    const url = 'https://api.open-meteo.com/v1/forecast?' + params.toString();
+    try {
+      const res = await fetchWithTimeout(url, 8000);
+      if (!res.ok) throw new Error('status ' + res.status);
+      const j = await res.json();
+      if (j && j.daily && j.daily.sunrise){ sunData = j; renderSunScene(); }
+    } catch (err) {
+      const b = $('sunTimes');
+      // leave the placeholder dashes; non-critical
     }
   }
 
@@ -1081,6 +1254,108 @@
     stripEl.innerHTML = html;
   }
 
+  // Builds the cheesy sun-or-moon scene. By day: a smiling sun (with shades
+  // when the sky's clear, or peeking shyly from behind a cloud when it's not).
+  // By night: a sleeping crescent moon with floating Zzz's and twinkling stars.
+  // "Now" relative to sunrise/sunset decides which character to show.
+  function renderSunScene(){
+    const svg = $('sunSky');
+    if (!svg || !sunData || !sunData.daily || !sunData.daily.sunrise) return;
+    const D = sunData.daily;
+    const todaySunrise = new Date(D.sunrise[0]);
+    const todaySunset = new Date(D.sunset[0]);
+    const now = new Date();
+    const isDay = now >= todaySunrise && now < todaySunset;
+    const todayCode = D.weather_code ? D.weather_code[0] : 0;
+    const clear = wxCategory(todayCode) === 'clear';
+
+    // progress of sun across the sky (0 at sunrise, 1 at sunset) for arc dot
+    let prog = (now - todaySunrise) / (todaySunset - todaySunrise);
+    prog = Math.max(0, Math.min(1, prog));
+
+    // fill times + daylight
+    $('sunriseT').textContent = todaySunrise.toLocaleTimeString([], {timeZone:'America/Toronto', hour:'2-digit', minute:'2-digit'});
+    $('sunsetT').textContent = todaySunset.toLocaleTimeString([], {timeZone:'America/Toronto', hour:'2-digit', minute:'2-digit'});
+    if (D.daylight_duration && D.daylight_duration[0] != null){
+      const secs = D.daylight_duration[0];
+      const h = Math.floor(secs/3600), m = Math.round((secs%3600)/60);
+      $('daylightT').textContent = `${h}h ${m}m`;
+    }
+
+    const W = 320, H = 120;
+    const skyGrad = isDay
+      ? (clear
+          ? `<linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2a7fb8"/><stop offset="100%" stop-color="#7ec8e3"/></linearGradient>`
+          : `<linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3a5a72"/><stop offset="100%" stop-color="#6a8aa0"/></linearGradient>`)
+      : `<linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a1228"/><stop offset="100%" stop-color="#1b2a4a"/></linearGradient>`;
+
+    // arc path the sun/moon travels
+    const arc = `M20 ${H-18} Q${W/2} -8 ${W-20} ${H-18}`;
+    // position along that quadratic bezier at t=prog
+    const t = isDay ? prog : 0.5;
+    const bx = (1-t)*(1-t)*20 + 2*(1-t)*t*(W/2) + t*t*(W-20);
+    const by = (1-t)*(1-t)*(H-18) + 2*(1-t)*t*(-8) + t*t*(H-18);
+
+    let character = '';
+    if (isDay){
+      if (clear){
+        // smiling sun with sunglasses
+        character = `<g class="sunChar" transform="translate(${bx.toFixed(1)},${Math.max(20,by).toFixed(1)})">
+          <g>${Array.from({length:12}).map((_,k)=>{const a=k*30*Math.PI/180;const x1=Math.cos(a)*20,y1=Math.sin(a)*20,x2=Math.cos(a)*27,y2=Math.sin(a)*27;return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#ffd24a" stroke-width="2.5" stroke-linecap="round"/>`;}).join('')}</g>
+          <circle r="17" fill="#ffd24a"/>
+          <g class="sunGlasses">
+            <rect x="-13" y="-5" width="10" height="7" rx="2" fill="#1a1a1a"/>
+            <rect x="3" y="-5" width="10" height="7" rx="2" fill="#1a1a1a"/>
+            <line x1="-3" y1="-2" x2="3" y2="-2" stroke="#1a1a1a" stroke-width="1.6"/>
+            <line x1="-13" y1="-3" x2="-16" y2="-4" stroke="#1a1a1a" stroke-width="1.6"/>
+          </g>
+          <path d="M-6 6 Q0 11 6 6" stroke="#b8860b" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </g>`;
+      } else {
+        // shy sun peeking from behind a drifting cloud
+        character = `<g transform="translate(${bx.toFixed(1)},${Math.max(24,by).toFixed(1)})">
+          <g class="sunChar">
+            <circle r="15" fill="#ffd24a"/>
+            <circle cx="-5" cy="-3" r="1.6" fill="#b8860b"/>
+            <circle cx="5" cy="-3" r="1.6" fill="#b8860b"/>
+            <path d="M-5 4 Q0 8 5 4" stroke="#b8860b" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          </g>
+          <g class="hideCloud">
+            <ellipse cx="10" cy="8" rx="22" ry="12" fill="#e8eef2"/>
+            <ellipse cx="-8" cy="11" rx="14" ry="9" fill="#dde6ec"/>
+            <ellipse cx="26" cy="11" rx="13" ry="8" fill="#cfdae2"/>
+          </g>
+        </g>`;
+      }
+    } else {
+      // sleeping crescent moon with Zzz
+      character = `<g class="moonChar" transform="translate(${(W/2).toFixed(1)},42)">
+        <path d="M10 0 A17 17 0 1 1 -6 -13 A13 13 0 1 0 10 0 Z" fill="#eaf0ff"/>
+        <circle cx="-3" cy="-2" r="1.4" fill="#9aa6c0"/>
+        <path d="M-7 4 q3 2 6 0" stroke="#9aa6c0" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+        <text class="zzz" x="14" y="-12" fill="#eaf0ff" font-size="9" font-weight="700">z</text>
+        <text class="zzz" x="18" y="-18" fill="#eaf0ff" font-size="11" font-weight="700" style="animation-delay:1s">Z</text>
+      </g>`;
+    }
+
+    // stars at night
+    let stars = '';
+    if (!isDay){
+      const pts = [[40,30],[80,18],[130,40],[210,25],[260,45],[290,22],[160,20]];
+      stars = pts.map((p,i)=>`<circle class="twinkle" cx="${p[0]}" cy="${p[1]}" r="1.5" fill="#fff" style="animation-delay:${(i*0.3).toFixed(1)}s"/>`).join('');
+    }
+
+    svg.innerHTML = `
+      <defs>${skyGrad}</defs>
+      <rect x="0" y="0" width="${W}" height="${H}" fill="url(#skyG)"/>
+      ${stars}
+      <path class="sunArc" d="${arc}" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" stroke-dasharray="3 5"/>
+      ${isDay ? `<circle cx="20" cy="${H-18}" r="2.5" fill="#ffd24a"/><circle cx="${W-20}" cy="${H-18}" r="2.5" fill="#ff8c5a"/>` : ''}
+      ${character}
+      <rect x="0" y="${H-14}" width="${W}" height="14" fill="${isDay ? 'rgba(20,80,130,0.6)' : 'rgba(10,30,60,0.7)'}"/>
+    `;
+  }
+
   function renderOutlook(station){
     if (!fcData) return;
     const place = (STATIONS[station] && STATIONS[station].name) || 'this water';
@@ -1188,8 +1463,10 @@
 
     fetchData(station);
     fetchForecast(station);
+    fetchSun(station);
+    fetchAlerts(station);
     if (refreshTimer) clearInterval(refreshTimer);
-    refreshTimer = setInterval(()=>{ fetchData(currentStation); fetchForecast(currentStation); }, 10 * 60 * 1000);
+    refreshTimer = setInterval(()=>{ fetchData(currentStation); fetchForecast(currentStation); fetchSun(currentStation); fetchAlerts(currentStation); }, 10 * 60 * 1000);
   }
 
   select.addEventListener('change', (e)=> switchStation(e.target.value));
@@ -1204,8 +1481,10 @@
     } else {
       fetchData(currentStation);
       fetchForecast(currentStation);
+      fetchSun(currentStation);
+      fetchAlerts(currentStation);
       if (!refreshTimer){
-        refreshTimer = setInterval(()=>{ fetchData(currentStation); fetchForecast(currentStation); }, 10 * 60 * 1000);
+        refreshTimer = setInterval(()=>{ fetchData(currentStation); fetchForecast(currentStation); fetchSun(currentStation); fetchAlerts(currentStation); }, 10 * 60 * 1000);
       }
     }
   });
