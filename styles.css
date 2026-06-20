@@ -1,0 +1,260 @@
+/* ============================================================
+   Elektrek Inc. — stylesheet
+   Rugged industrial look: dark steel, hazard-amber accent,
+   condensed display type. Mobile-first, no dependencies.
+   ============================================================ */
+
+:root{
+  --steel-900:#0e1113;
+  --steel-800:#161a1d;
+  --steel-700:#1f2529;
+  --steel-600:#2b3338;
+  --line:#39434a;
+  --fog:#c7ced3;
+  --fog-dim:#8a949b;
+  --paper:#f3f5f6;
+  --amber:#ffb000;      /* hazard amber — the signature accent */
+  --amber-deep:#e08a00;
+  --max:1180px;
+  --pad:clamp(20px,5vw,64px);
+  --font-display:"Oswald",system-ui,sans-serif;
+  --font-body:"Archivo",system-ui,sans-serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--steel-900);
+  color:var(--fog);
+  font-family:var(--font-body);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+img{max-width:100%;display:block}
+a{color:inherit}
+
+/* ---------- header ---------- */
+.site-header{
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;
+  padding:14px var(--pad);
+  background:rgba(14,17,19,.86);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.brand-logo{height:52px;width:auto;display:block}
+.site-nav{display:flex;align-items:center;gap:clamp(12px,2.4vw,30px)}
+.site-nav a{
+  font-family:var(--font-display);
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-size:.84rem;font-weight:600;
+  color:var(--fog-dim);
+  text-decoration:none;
+  transition:color .15s;
+}
+.site-nav a:hover{color:var(--paper)}
+.nav-cta{
+  color:var(--steel-900)!important;
+  background:var(--amber);
+  padding:8px 16px;
+  border-radius:2px;
+}
+.nav-cta:hover{background:var(--amber-deep)}
+
+/* ---------- hero ---------- */
+.hero{
+  position:relative;
+  padding:clamp(70px,13vw,150px) var(--pad) clamp(60px,9vw,100px);
+  overflow:hidden;
+  isolation:isolate;
+}
+.hero-bg{
+  position:absolute;inset:0;z-index:-2;
+  background:url("images/hero-forest.jpg") center 35%/cover no-repeat;
+}
+/* dark gradient so the headline stays legible over the forest */
+.hero::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    linear-gradient(90deg,rgba(14,17,19,.94) 0%,rgba(14,17,19,.78) 45%,rgba(14,17,19,.35) 100%),
+    linear-gradient(0deg,var(--steel-900) 2%,transparent 38%);
+  pointer-events:none;
+}
+.hero > *{max-width:var(--max);margin-left:auto;margin-right:auto}
+.hero-grid{position:relative;z-index:1;max-width:760px}
+.eyebrow{
+  font-family:var(--font-display);
+  text-transform:uppercase;letter-spacing:.32em;
+  color:var(--amber);font-weight:600;font-size:.82rem;
+  margin-bottom:18px;
+}
+.hero-title{
+  font-family:var(--font-display);
+  font-weight:700;
+  text-transform:uppercase;
+  font-size:clamp(3.2rem,11vw,7.2rem);
+  line-height:.92;
+  letter-spacing:-.01em;
+  color:var(--paper);
+}
+.hero-title span{color:var(--amber)}
+.hero-sub{
+  margin:26px 0 34px;
+  font-size:clamp(1.05rem,2.2vw,1.3rem);
+  color:var(--fog);max-width:46ch;
+}
+.hero-actions{display:flex;flex-wrap:wrap;gap:14px}
+.hero-rule{
+  position:relative;z-index:1;
+  height:3px;margin-top:clamp(40px,7vw,80px);
+  background:linear-gradient(90deg,var(--amber),transparent 60%);
+}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-block;
+  font-family:var(--font-display);
+  text-transform:uppercase;letter-spacing:.08em;
+  font-weight:600;font-size:.92rem;
+  padding:14px 28px;border-radius:2px;
+  text-decoration:none;cursor:pointer;border:1px solid transparent;
+  transition:transform .12s,background .15s,color .15s;
+}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--amber);color:var(--steel-900)}
+.btn-primary:hover{background:var(--amber-deep)}
+.btn-ghost{border-color:var(--line);color:var(--paper)}
+.btn-ghost:hover{border-color:var(--amber);color:var(--amber)}
+
+/* ---------- philosophy ---------- */
+.philosophy{border-top:1px solid var(--line);background:var(--steel-800)}
+.phil-inner{max-width:var(--max);margin:0 auto;padding:clamp(54px,8vw,96px) var(--pad)}
+.phil-lede{
+  font-size:clamp(1.25rem,3vw,1.9rem);
+  line-height:1.45;color:var(--paper);
+  max-width:60ch;font-weight:400;
+}
+.spec-grid{
+  list-style:none;
+  margin:44px 0 38px;
+  display:grid;gap:1px;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  background:var(--line);
+  border:1px solid var(--line);
+}
+.spec-grid li{
+  background:var(--steel-700);
+  padding:18px 20px;
+  font-size:.98rem;color:var(--fog);
+  display:flex;align-items:flex-start;gap:12px;
+}
+.spec-grid li::before{
+  content:"";flex:0 0 auto;
+  width:8px;height:8px;margin-top:8px;
+  background:var(--amber);transform:rotate(45deg);
+}
+.phil-note{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.1em;color:var(--fog-dim);font-size:1.05rem}
+.phil-note span{color:var(--amber)}
+.text-link{
+  display:inline-block;margin-top:18px;
+  font-family:var(--font-display);text-transform:uppercase;letter-spacing:.1em;
+  color:var(--amber);text-decoration:none;font-weight:600;
+  border-bottom:1px solid transparent;
+}
+.text-link:hover{border-color:var(--amber)}
+
+/* ---------- product sections ---------- */
+.product{max-width:var(--max);margin:0 auto;padding:clamp(54px,8vw,96px) var(--pad)}
+.product-alt{background:var(--steel-800);max-width:none}
+.product-alt > *{max-width:var(--max);margin-left:auto;margin-right:auto}
+.product-head{margin-bottom:34px}
+.product-index{
+  font-family:var(--font-display);font-weight:700;
+  font-size:1rem;color:var(--amber);letter-spacing:.2em;
+}
+.product-head h2{
+  font-family:var(--font-display);font-weight:700;text-transform:uppercase;
+  font-size:clamp(2.4rem,6vw,4.2rem);line-height:1;color:var(--paper);
+  margin:6px 0 10px;
+}
+.product-tag{color:var(--fog-dim);font-size:1.1rem}
+
+/* gallery */
+.gallery{display:grid;gap:14px;grid-template-columns:1fr;margin-bottom:36px}
+.g-main{
+  background:var(--steel-700);border:1px solid var(--line);
+  aspect-ratio:4/3;overflow:hidden;
+}
+.g-main img{width:100%;height:100%;object-fit:cover}
+.g-thumbs{
+  display:grid;gap:8px;
+  grid-template-columns:repeat(auto-fill,minmax(82px,1fr));
+}
+.g-thumb{
+  padding:0;border:1px solid var(--line);background:var(--steel-700);
+  aspect-ratio:1;overflow:hidden;cursor:pointer;
+  transition:border-color .15s,opacity .15s;opacity:.7;
+}
+.g-thumb img{width:100%;height:100%;object-fit:cover}
+.g-thumb:hover{opacity:1}
+.g-thumb.is-active{border-color:var(--amber);opacity:1}
+
+/* specs */
+.specs-config{
+  font-family:var(--font-display);text-transform:uppercase;letter-spacing:.12em;
+  color:var(--amber);font-weight:600;margin-bottom:18px;font-size:1.05rem;
+}
+.spec-list{list-style:none;display:grid;gap:10px}
+.spec-list li{
+  padding-left:26px;position:relative;color:var(--fog);font-size:1.02rem;
+}
+.spec-list li::before{
+  content:"";position:absolute;left:0;top:.62em;
+  width:12px;height:2px;background:var(--amber);
+}
+
+/* ---------- subscribe ---------- */
+.subscribe{border-top:1px solid var(--line);background:var(--steel-900)}
+.sub-inner{max-width:760px;margin:0 auto;padding:clamp(54px,8vw,96px) var(--pad);text-align:center}
+.subscribe h2{
+  font-family:var(--font-display);font-weight:700;text-transform:uppercase;
+  font-size:clamp(2rem,5vw,3rem);color:var(--paper);
+}
+.sub-copy{margin:16px auto 30px;max-width:48ch;color:var(--fog)}
+.sub-copy a{color:var(--amber)}
+.sub-form{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.sub-form input[type=email]{
+  flex:1 1 280px;min-width:0;
+  background:var(--steel-700);border:1px solid var(--line);
+  color:var(--paper);padding:14px 16px;border-radius:2px;font-size:1rem;
+}
+.sub-form input[type=email]:focus{outline:2px solid var(--amber);outline-offset:1px;border-color:var(--amber)}
+.sub-form input::placeholder{color:var(--fog-dim)}
+.sub-fineprint{margin-top:16px;color:var(--fog-dim);font-size:.86rem}
+
+/* ---------- footer ---------- */
+.site-footer{
+  border-top:1px solid var(--line);
+  padding:30px var(--pad);text-align:center;
+  color:var(--fog-dim);font-size:.9rem;background:var(--steel-800);
+}
+.footer-contact{margin-top:6px}
+.footer-contact a{color:var(--fog);text-decoration:none}
+.footer-contact a:hover{color:var(--amber)}
+
+/* ---------- responsive ---------- */
+@media(min-width:760px){
+  .gallery{grid-template-columns:1fr;}
+}
+@media(max-width:560px){
+  .site-nav a:not(.nav-cta){display:none}
+}
+
+/* ---------- a11y / motion ---------- */
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{transition:none!important}
+}
