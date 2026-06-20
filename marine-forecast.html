@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Trent-Severn / Georgian Bay Buoys</title>
+<style>
+  :root{
+    --bg:#06121c; --card:#0d1f30; --card2:#102739; --line:#1c3a52;
+    --txt:#eaf3fa; --sub:#7fa6c2; --accent:#37c2ff; --warn:#ff7a59; --good:#3ddc97; --danger:#ff4d6d;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:radial-gradient(circle at 50% -10%, #123349 0%, var(--bg) 60%);
+    color:var(--txt); min-height:100vh; padding:env(safe-area-inset-top) 0 24px;
+  }
+  header{padding:18px 16px 8px; text-align:center;}
+  header h1{font-size:18px; margin:0 0 2px; font-weight:600; letter-spacing:.2px;}
+  header .sub{font-size:12px; color:var(--sub);}
+
+  .picker{padding:10px 16px 4px;}
+  select{
+    width:100%; appearance:none; -webkit-appearance:none;
+    background:var(--card2) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="9" viewBox="0 0 14 9"><path d="M1 1l6 6 6-6" stroke="%237fa6c2" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat right 14px center;
+    border:1px solid var(--line); color:var(--txt); font-size:16px; font-weight:600;
+    padding:14px 38px 14px 14px; border-radius:14px; outline:none;
+  }
+  optgroup{color:var(--sub); font-weight:600;}
+  option{color:#0a1622; background:#fff; font-weight:500;}
+
+  .statusRow{display:flex; align-items:center; gap:8px; padding:10px 16px 0; font-size:12px; color:var(--sub);}
+  .dot{width:8px; height:8px; border-radius:50%; background:#666; flex-shrink:0;}
+  .dot.ok{background:var(--good); box-shadow:0 0 6px var(--good);}
+  .dot.error{background:var(--warn); box-shadow:0 0 6px var(--warn);}
+  .dot.loading{background:var(--accent); animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  #refreshBtn{
+    margin-left:auto; background:none; border:none; color:var(--accent);
+    font-size:13px; font-weight:600; padding:2px 4px;
+    display:flex; align-items:center; gap:6px; cursor:pointer;
+  }
+  #refreshBtn .refreshLabel{ color:var(--accent); }
+  .buoyIcon{ display:block; overflow:visible; }
+  .buoyBody{ transform-origin:18px 16px; animation:buoyBob 2.6s ease-in-out infinite; }
+  .buoyWater path{ animation:waterShift 2.6s ease-in-out infinite; }
+  @keyframes buoyBob{
+    0%,100%{ transform:translateY(0) rotate(-4deg); }
+    50%{ transform:translateY(2.5px) rotate(4deg); }
+  }
+  @keyframes waterShift{
+    0%,100%{ transform:translateX(0); }
+    50%{ transform:translateX(-2px); }
+  }
+  /* While refreshing, bob faster instead of spinning a generic icon */
+  #refreshBtn.spinning .buoyBody{ animation-duration:0.7s; }
+  #refreshBtn.spinning .buoyWater path{ animation-duration:0.7s; }
+  @media (prefers-reduced-motion: reduce){
+    .buoyBody, .buoyWater path{ animation:none; }
+  }
+
+  .errBox{
+    margin:10px 16px 0; padding:10px 12px; background:#2a1420; border:1px solid #5a2a3a;
+    border-radius:10px; font-size:12.5px; color:#ffb9c4; line-height:1.4;
+  }
+
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:14px 16px 0;}
+  .card{
+    background:linear-gradient(180deg,var(--card2),var(--card)); border:1px solid var(--line);
+    border-radius:16px; padding:14px; position:relative;
+  }
+  .card.wide{grid-column:1/-1;}
+  .card .label{font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--sub); margin-bottom:6px;}
+  .card .val{font-size:28px; font-weight:700; line-height:1.1;}
+  .card .unit{font-size:14px; color:var(--sub); font-weight:500; margin-left:2px;}
+  .card .meta{font-size:12px; color:var(--sub); margin-top:4px;}
+  .skel{color:transparent; background:linear-gradient(90deg,#16314650,#1c3d5680,#16314650); background-size:200% 100%; border-radius:6px; animation:shimmer 1.4s infinite;}
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+  .trend{font-size:12px; margin-top:2px;}
+  .trend.up{color:var(--warn);} .trend.down{color:var(--good);}
+  .trend.rough{color:var(--danger); font-weight:600;}
+
+  .windDirRow{display:flex; align-items:center; gap:8px; margin-top:6px;}
+  .compass{flex-shrink:0;}
+  /* needle springs to its new heading with a little overshoot wobble */
+  .needle{
+    transform-origin:22px 22px;
+    transition:transform 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .waveWrap{padding:14px 16px 0;}
+  .waveCard{background:var(--card2); border:1px solid var(--line); border-radius:16px; padding:14px; overflow:hidden;}
+  .waveCard .label{font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--sub); margin-bottom:2px;}
+  .waveCard .seaStateLine{font-size:15px; font-weight:600; margin:2px 0 10px;}
+  svg.waveViz{width:100%; height:64px; display:block; overflow:hidden;}
+  .waveAnim{animation-name:waveDrift; animation-timing-function:linear; animation-iteration-count:infinite;}
+  @keyframes waveDrift{ from{transform:translateX(0);} to{transform:translateX(-300px);} }
+  @media (prefers-reduced-motion: reduce){ .waveAnim{animation:none;} }
+
+  .fcWrap{padding:14px 16px 0;}
+  .fcCard{background:linear-gradient(180deg,var(--card2),var(--card)); border:1px solid var(--line); border-radius:16px; padding:14px;}
+  .fcHead{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px;}
+  .fcHead .label{font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--sub);}
+  .fcHead .src{font-size:10px; color:#5a7d99;}
+  .fcHeadline{font-size:15px; line-height:1.45; font-weight:500; padding:12px; border-radius:12px;
+              background:#0c2034; border:1px solid var(--line); border-left-width:4px;}
+  .fcHeadline b{font-weight:700;}
+  .fcBest{font-size:12.5px; color:#9fd9b6; margin:10px 2px 2px;}
+  .fcDaily{display:flex; flex-direction:column; gap:8px; margin-top:12px;}
+  .fcDay{display:grid; grid-template-columns:62px 1fr; gap:10px; align-items:center;
+         background:#0c2034; border:1px solid var(--line); border-radius:10px; padding:10px 11px; border-left-width:4px;}
+  .fcDay .dname{font-size:13px; font-weight:700;}
+  .fcDay .dsub{font-size:11px; color:var(--sub); margin-top:1px;}
+  .fcDay .dverdict{font-size:13px; font-weight:600;}
+  .fcDay .dreason{font-size:11.5px; color:var(--sub); margin-top:2px; line-height:1.35;}
+  .fcMsg{font-size:11.5px; color:var(--sub); padding:2px; line-height:1.4;}
+
+  /* ---- 7-Day graphical weather strip ---- */
+  .wxStripWrap{padding:14px 16px 0;}
+  .wxStripCard{background:var(--card2); border:1px solid var(--line); border-radius:16px; padding:14px 0 14px 14px;}
+  .wxStripCard .label{font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--sub); margin-bottom:10px; padding-right:14px;}
+  .wxStrip{
+    display:flex; gap:10px; overflow-x:auto; padding-right:14px; padding-bottom:2px;
+    -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity;
+  }
+  .wxDay{
+    flex:0 0 auto; width:96px; scroll-snap-align:start;
+    background:linear-gradient(180deg,#102739,#0d1f30); border:1px solid var(--line);
+    border-radius:14px; padding:10px 8px 11px; text-align:center;
+  }
+  .wxDay .wxDname{font-size:12.5px; font-weight:700; margin-bottom:6px;}
+  .wxDay .wxScene{width:100%; height:54px; display:block; margin-bottom:6px; overflow:hidden;}
+  .wxDay .wxTemps{font-size:12px; font-weight:600; white-space:nowrap;}
+  .wxDay .wxTemps .lo{color:var(--sub); font-weight:500;}
+  .wxDay .wxRain{font-size:10.5px; color:#6fa8c8; margin-top:3px;}
+  .wxBoatGroup{transform-origin:48px 41px; animation:boatRock 3s ease-in-out infinite;}
+  .wxSunRays{transform-origin:22px 14px; animation:sunSpin 18s linear infinite;}
+  /* Mini waves drift by exactly one wavelength (16px) so the loop is seamless.
+     translate3d nudges both engines to composite on the GPU for stable, jank-free motion. */
+  .wxSeaA{animation:wxWaveDrift 2.8s linear infinite; will-change:transform;}
+  .wxSeaB{animation:wxWaveDrift 4.2s linear infinite; will-change:transform;}
+  @keyframes wxWaveDrift{
+    from{transform:translate3d(0,0,0);}
+    to{transform:translate3d(-16px,0,0);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .wxBoatGroup, .wxSunRays, .wxSeaA, .wxSeaB{animation:none;}
+  }
+
+  /* ---- Boat-o-meter: kid-friendly conditions animation ---- */
+  .boatScene{position:relative; height:120px; margin:10px 0 4px; border-radius:12px; overflow:hidden;
+             background:linear-gradient(180deg,#0e2940 0%,#0c3350 55%,#0a3a5e 100%);}
+  .boatScene svg{position:absolute; inset:0; width:100%; height:100%;}
+  .boatGroup{transform-origin:150px 78px; animation:boatRock 3s ease-in-out infinite;}
+  @keyframes boatRock{0%,100%{transform:rotate(var(--rk,4deg)) translateY(0);}
+                      50%{transform:rotate(calc(var(--rk,4deg) * -1)) translateY(var(--bob,2px));}}
+  .rkCalm{--rk:2deg;  --bob:1px; animation-duration:4.5s;}
+  .rkGood{--rk:4deg;  --bob:2px; animation-duration:3.4s;}
+  .rkCaut{--rk:7deg;  --bob:4px; animation-duration:2.2s;}
+  .rkRough{--rk:12deg;--bob:7px; animation-duration:1.3s;}
+  .rkStorm{--rk:18deg;--bob:10px;animation-duration:0.85s;}
+  .seaA{animation:seaDrift 4s linear infinite;}
+  .seaB{animation:seaDrift 6s linear infinite reverse;}
+  @keyframes seaDrift{from{transform:translateX(0);}to{transform:translateX(-40px);}}
+  .sunRays{transform-origin:60px 34px; animation:sunSpin 18s linear infinite;}
+  @keyframes sunSpin{to{transform:rotate(360deg);}}
+  .cloudDrift{animation:cloudMove 9s ease-in-out infinite;}
+  @keyframes cloudMove{0%,100%{transform:translateX(-6px);}50%{transform:translateX(10px);}}
+  .bolt{animation:boltFlash 2.4s steps(1) infinite;}
+  @keyframes boltFlash{0%,92%,100%{opacity:0;}94%,98%{opacity:1;}}
+  .rain line{animation:rainFall 0.7s linear infinite;}
+  @keyframes rainFall{from{transform:translateY(-6px);opacity:0;}30%{opacity:1;}to{transform:translateY(14px);opacity:0;}}
+  @media (prefers-reduced-motion: reduce){
+    .boatGroup,.seaA,.seaB,.sunRays,.cloudDrift,.bolt,.rain line{animation:none;}
+  }
+
+  .ecccBtn{display:flex; align-items:center; justify-content:center; gap:8px;
+           margin-top:12px; padding:11px; border-radius:12px; text-decoration:none;
+           background:#102a16; border:1px solid #1f5a32; color:#7fe0a0; font-size:13px; font-weight:600;}
+
+  .sparkWrap{padding:14px 16px 0;}
+  .sparkCard{background:var(--card2); border:1px solid var(--line); border-radius:16px; padding:14px;}
+  .sparkCard .label{font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--sub); margin-bottom:8px;}
+  svg.spark{width:100%; height:60px; display:block;}
+
+  .logWrap{padding:14px 16px 0;}
+  .logCard{background:var(--card2); border:1px solid var(--line); border-radius:16px; padding:6px 0; max-height:220px; overflow-y:auto;}
+  .logRow{display:grid; grid-template-columns:64px 1fr 70px; gap:8px; padding:8px 14px; font-size:12.5px; border-bottom:1px solid var(--line);}
+  .logRow:last-child{border-bottom:none;}
+  .logRow .t{color:var(--sub);}
+  .logRow .w{font-weight:600;}
+
+  footer{padding:18px 16px 0; text-align:center; font-size:11px; color:#496a85;}
+  footer a{color:#6fa8c8;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="stationTitle">Lake Simcoe Buoy</h1>
+  <div class="sub" id="stationSub">Station 45151 · ECCC / NDBC live feed</div>
+</header>
+
+<div class="picker">
+  <select id="stationSelect">
+    <optgroup label="Trent-Severn corridor">
+      <option value="45151" selected>Lake Simcoe (45151)</option>
+    </optgroup>
+    <optgroup label="Georgian Bay (Trent-Severn exit)">
+      <option value="45143">South Georgian Bay (45143)</option>
+      <option value="45137">Georgian Bay – North Channel area (45137)</option>
+      <option value="45154">North Channel East (45154)</option>
+    </optgroup>
+    <optgroup label="Other ECCC Great Lakes buoys">
+      <option value="45152">Lake Nipissing (45152)</option>
+      <option value="45149">Southern Lake Huron (45149)</option>
+      <option value="45139">West Lake Ontario – Grimsby (45139)</option>
+    </optgroup>
+  </select>
+</div>
+
+<div class="statusRow">
+  <div class="dot loading" id="statusDot"></div>
+  <span id="statusText">Connecting…</span>
+  <button id="refreshBtn" aria-label="Refresh buoy data">
+    <svg class="buoyIcon" viewBox="0 0 36 34" width="26" height="24" aria-hidden="true">
+      <!-- water lines -->
+      <g class="buoyWater">
+        <path d="M0 26 Q5 23 10 26 T20 26 T30 26 T40 26" fill="none" stroke="#37c2ff" stroke-width="1.6" stroke-linecap="round" opacity="0.55"/>
+        <path d="M-2 30 Q5 27 10 30 T20 30 T30 30 T42 30" fill="none" stroke="#37c2ff" stroke-width="1.6" stroke-linecap="round" opacity="0.3"/>
+      </g>
+      <!-- buoy body, bobbing -->
+      <g class="buoyBody">
+        <!-- pole + light -->
+        <circle cx="18" cy="3.5" r="2.2" fill="#ffd166"/>
+        <rect x="17" y="5" width="2" height="4" fill="#c9d7e3"/>
+        <!-- float -->
+        <path d="M11 13 h14 l-2.5 11 a4.5 4.5 0 0 1 -9 0 z" fill="#ff5a4d"/>
+        <rect x="11.6" y="16.4" width="12.8" height="3.1" fill="#f7f7f7"/>
+        <!-- top cone -->
+        <path d="M13.5 13 L18 8 L22.5 13 z" fill="#ff5a4d"/>
+      </g>
+    </svg>
+    <span class="refreshLabel">Refresh</span>
+  </button>
+</div>
+
+<div id="errorArea"></div>
+
+<div class="grid">
+  <div class="card">
+    <div class="label">Wind</div>
+    <div class="val skel" id="wind">--</div>
+    <div class="meta" id="windKph">--</div>
+    <div class="windDirRow">
+      <svg class="compass" id="compass" viewBox="0 0 44 44" width="40" height="40" aria-hidden="true">
+        <circle cx="22" cy="22" r="20" fill="#0a1c2c" stroke="#1c3a52" stroke-width="2"/>
+        <!-- cardinal ticks -->
+        <text x="22" y="9" text-anchor="middle" font-size="6" fill="#7fa6c2" font-weight="700">N</text>
+        <text x="22" y="40" text-anchor="middle" font-size="6" fill="#456">S</text>
+        <text x="38" y="24" text-anchor="middle" font-size="6" fill="#456">E</text>
+        <text x="6" y="24" text-anchor="middle" font-size="6" fill="#456">W</text>
+        <!-- needle: red half points where wind comes FROM -->
+        <g class="needle" id="needle">
+          <polygon points="22,7 25,22 22,20 19,22" fill="#ff5a4d"/>
+          <polygon points="22,37 25,22 22,24 19,22" fill="#c9d7e3"/>
+          <circle cx="22" cy="22" r="2.4" fill="#ffd166"/>
+        </g>
+      </svg>
+      <div class="meta" id="windDir" style="margin-top:0;">--</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="label">Gust</div>
+    <div class="val skel" id="gust">--</div>
+    <div class="meta" id="gustKph">--</div>
+  </div>
+  <div class="card">
+    <div class="label">Wave Height</div>
+    <div class="val skel" id="waveHeight">--</div>
+    <div class="meta" id="wavePeriod">--</div>
+    <div class="trend" id="seaState">sea state —</div>
+  </div>
+  <div class="card">
+    <div class="label">Pressure</div>
+    <div class="val skel" id="pressure">--</div>
+    <div class="trend" id="pressureTrend">--</div>
+    <div class="meta" id="pressurePlain">--</div>
+  </div>
+  <div class="card">
+    <div class="label">Air Temp</div>
+    <div class="val skel" id="airTemp">--</div>
+    <div class="meta" id="airTempF">--</div>
+  </div>
+  <div class="card">
+    <div class="label">Water Temp</div>
+    <div class="val skel" id="waterTemp">--</div>
+    <div class="meta" id="waterTempF">--</div>
+  </div>
+  <div class="card wide">
+    <div class="label">Last Observation</div>
+    <div class="val" id="lastObs" style="font-size:18px;">--</div>
+  </div>
+</div>
+
+<div class="waveWrap">
+  <div class="waveCard">
+    <div class="label">Water Conditions</div>
+    <div class="seaStateLine" id="seaStateBig">—</div>
+    <svg class="waveViz" id="waveSvg" viewBox="0 0 300 64" preserveAspectRatio="none"></svg>
+  </div>
+</div>
+
+<div class="fcWrap">
+  <div class="fcCard">
+    <div class="fcHead">
+      <span class="label">Boating Outlook</span>
+      <span class="src">Canadian GEM model · via Open-Meteo</span>
+    </div>
+    <div id="fcHeadline" class="fcHeadline">Reading the forecast…</div>
+    <div class="boatScene" id="boatScene"></div>
+    <div id="fcBest" class="fcBest"></div>
+    <div id="fcDays" class="fcDaily"></div>
+    <a class="ecccBtn" id="ecccBtn" href="#" target="_blank" rel="noopener">
+      🍁 <span id="ecccLabel">Official ECCC marine forecast</span> ↗
+    </a>
+    <div class="fcMsg" id="fcFootnote" style="margin-top:8px;">Verdict is wind &amp; gust based, for crossing open water. Always check the official ECCC bulletin before heading out.</div>
+  </div>
+</div>
+
+<div class="wxStripWrap">
+  <div class="wxStripCard">
+    <div class="label">7-Day Forecast</div>
+    <div class="wxStrip" id="wxStrip"></div>
+  </div>
+</div>
+
+<div class="sparkWrap">
+  <div class="sparkCard">
+    <div class="label">Wind Speed — last 24h</div>
+    <svg class="spark" id="sparkSvg" viewBox="0 0 300 60" preserveAspectRatio="none"></svg>
+  </div>
+</div>
+
+<div class="logWrap">
+  <div class="logCard" id="logCard"></div>
+</div>
+
+
+<footer>
+  Data from NOAA NDBC, buoys owned &amp; maintained by Environment and Climate Change Canada.<br>
+  Auto-refreshes every 10 min. Tap a station above to switch.<br>
+  <span style="opacity:0.6">build v5 · 2026-06-20</span>
+</footer>
+
+<script>
+(function(){
+  const STATIONS = {
+    '45151': {name:'Lake Simcoe Buoy', sub:'Station 45151 · Lake Simcoe, mid-lake',
+              lat:44.50, lon:-79.37,
+              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=11&siteID=05505', ecccLabel:'ECCC marine forecast (nearest: S. Georgian Bay)'},
+    '45143': {name:'South Georgian Bay', sub:'Station 45143 · near Wasaga Beach / Collingwood',
+              lat:44.94, lon:-80.63,
+              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=11&siteID=05505', ecccLabel:'ECCC marine forecast — Southern Georgian Bay'},
+    '45137': {name:'Georgian Bay', sub:'Station 45137 · open water, North Channel approach',
+              lat:45.54, lon:-81.01,
+              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=11&siteID=05500', ecccLabel:'ECCC marine forecast — Georgian Bay'},
+    '45154': {name:'North Channel East', sub:'Station 45154 · near Killarney / Manitoulin',
+              lat:46.00, lon:-81.60,
+              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=11&siteID=05500', ecccLabel:'ECCC marine forecast — Georgian Bay / North Channel'},
+    '45152': {name:'Lake Nipissing', sub:'Station 45152 · French River watershed',
+              lat:46.28, lon:-79.78,
+              eccc:'https://weather.gc.ca/marine/index_e.html', ecccLabel:'ECCC marine forecasts index'},
+    '45149': {name:'Southern Lake Huron', sub:'Station 45149 · near Sarnia / Lake Huron exit',
+              lat:43.00, lon:-82.10,
+              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=10&siteID=05510', ecccLabel:'ECCC marine forecast — Lake Huron'},
+    '45139': {name:'West Lake Ontario', sub:'Station 45139 · Grimsby, west Lake Ontario',
+              lat:43.22, lon:-79.55,
+              eccc:'https://weather.gc.ca/marine/forecast_e.html?mapID=12&siteID=05600', ecccLabel:'ECCC marine forecast — Lake Ontario'}
+  };
+
+  const select = document.getElementById('stationSelect');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const refreshBtn = document.getElementById('refreshBtn');
+  const errorArea = document.getElementById('errorArea');
+  const stationTitle = document.getElementById('stationTitle');
+  const stationSub = document.getElementById('stationSub');
+  const $ = id => document.getElementById(id);
+
+  const PROXIES = [
+    (url) => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url),
+    (url) => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+    (url) => 'https://r.jina.ai/' + url,
+    (url) => 'https://thingproxy.freeboard.io/fetch/' + url,
+    (url) => 'https://corsproxy.io/?url=' + encodeURIComponent(url)
+  ];
+  const MM = v => v === undefined || v === null || v === 'MM' || v === '' ;
+
+  function looksLikeNdbcData(text){
+    if (!text || text.length < 20) return false;
+    const head = text.slice(0, 400);
+    // Real NDBC files start with a '#YY MM DD ...' header. A proxy error page,
+    // rate-limit notice, or HTML block page will not contain this — catching
+    // that here avoids silently rendering a wall of blank dashes.
+    return /#\s*YY\s+MM\s+DD/i.test(head) || /WDIR\s+WSPD/i.test(head);
+  }
+
+  async function fetchWithTimeout(url, ms){
+    const ctrl = new AbortController();
+    const t = setTimeout(()=>ctrl.abort(), ms);
+    try {
+      const res = await fetch(url, { cache: 'no-store', signal: ctrl.signal });
+      return res;
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  let currentStation = '45151';
+  let refreshTimer = null;
+
+  // Keep the last good reading per station so a failed refresh shows stale
+  // data rather than blanking the whole screen. Persisted to localStorage
+  // when the browser allows it (wrapped so a null-origin file:// context,
+  // where storage may throw, degrades gracefully to in-memory only).
+  const lastGood = {};
+  function saveGood(station, text){
+    lastGood[station] = { text, at: Date.now() };
+    try { localStorage.setItem('buoy_' + station, JSON.stringify(lastGood[station])); } catch(e){}
+  }
+  function loadGood(station){
+    if (lastGood[station]) return lastGood[station];
+    try {
+      const raw = localStorage.getItem('buoy_' + station);
+      if (raw){ lastGood[station] = JSON.parse(raw); return lastGood[station]; }
+    } catch(e){}
+    return null;
+  }
+  function ageText(ms){
+    const mins = Math.round((Date.now() - ms) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + ' min ago';
+    const hrs = Math.round(mins / 60);
+    return hrs + (hrs === 1 ? ' hour ago' : ' hours ago');
+  }
+
+  function dataUrl(station){
+    return `https://www.ndbc.noaa.gov/data/realtime2/${station}.txt`;
+  }
+
+  function setSkeleton(){
+    ['wind','gust','waveHeight','pressure','airTemp','waterTemp'].forEach(id=>{
+      $(id).textContent = '--';
+      $(id).classList.add('skel');
+    });
+    ['windKph','gustKph','windDir','airTempF','waterTempF','pressurePlain'].forEach(id=>{ $(id).textContent = '--'; });
+  }
+
+  function fmt(v, dec){
+    if (MM(v) || isNaN(parseFloat(v))) return '—';
+    return parseFloat(v).toFixed(dec);
+  }
+
+  // Deep-water wave dispersion approximation: L = (g / 2π) · T²  ≈ 1.56 · T²
+  // Used internally only (not displayed as a raw number) to gauge wave
+  // steepness for the "chop character" description and the visual.
+  function estWavelengthM(periodSec){
+    if (MM(periodSec)) return null;
+    const T = Number(periodSec);
+    if (isNaN(T) || T <= 0) return null;
+    return 1.56 * T * T;
+  }
+
+  // Height bands calibrated for small-craft conditions on an inland lake
+  // (these numbers would read as "calm" on an open-ocean Beaufort scale,
+  // but a 0.6m chop is genuinely uncomfortable in a small boat).
+  function seaStateLabel(heightM){
+    if (heightM === null) return null;
+    if (heightM < 0.10) return 'Glassy calm';
+    if (heightM < 0.25) return 'Rippled';
+    if (heightM < 0.40) return 'Light chop';
+    if (heightM < 0.60) return 'Choppy';
+    if (heightM < 0.90) return 'Rough';
+    if (heightM < 1.30) return 'Very rough';
+    return 'Heavy chop — small-craft advisory territory';
+  }
+
+  // Steepness (height ÷ wavelength) describes whether the chop is short
+  // and stacked up, or a smoother longer-period roll.
+  function chopCharacter(heightM, periodSec){
+    const lambda = estWavelengthM(periodSec);
+    if (heightM === null || lambda === null || lambda === 0) return '';
+    const steepness = heightM / lambda;
+    if (steepness > 0.045) return 'short, steep wind chop';
+    if (steepness > 0.025) return 'typical wind chop';
+    return 'smoother, longer-period roll';
+  }
+
+  // NDBC row timestamps are UTC. Build a Date and render in the phone's
+  // local zone so "Last observation" matches the user's wall clock.
+  function rowToLocal(row){
+    if (!row || MM(row.yy) || MM(row.month)) return null;
+    const d = new Date(Date.UTC(
+      +row.yy, (+row.month) - 1, +row.dd, +row.hh, +row.minute || 0
+    ));
+    if (isNaN(d.getTime())) return null;
+    return d;
+  }
+  function fmtLocalDateTime(d){
+    if (!d) return '—';
+    return d.toLocaleString([], {
+      timeZone:'America/Toronto',
+      month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZoneName:'short'
+    });
+  }
+  function fmtLocalTime(d){
+    if (!d) return '--:--';
+    return d.toLocaleTimeString([], { timeZone:'America/Toronto', hour:'numeric', minute:'2-digit' });
+  }
+
+  // Classic boater's barometer rules of thumb, in plain English. The number
+  // is the 3-hour pressure tendency (PTDY) in hPa.
+  function pressurePlainEnglish(ptdy){
+    if (ptdy === null || isNaN(ptdy)) return '';
+    const mag = Math.abs(ptdy);
+    if (mag < 0.5) return 'Holding steady — little change expected';
+    if (ptdy > 0){
+      if (mag >= 2)  return 'Rising fast — clearing, improving conditions';
+      return 'Rising — settling toward fair weather';
+    } else {
+      if (mag >= 2)  return 'Falling fast — unsettled, watch for weather moving in';
+      return 'Falling — a change may be on the way';
+    }
+  }
+
+  const COMPASS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  function dirText(deg){
+    if (deg === null || deg === undefined || isNaN(deg)) return null;
+    const idx = Math.round(((deg % 360) / 22.5)) % 16;
+    return COMPASS[idx];
+  }
+
+  function severityTier(heightM){
+    if (heightM === null) return 'unknown';
+    if (heightM >= 0.90) return 'rough';
+    if (heightM >= 0.40) return 'moderate';
+    return 'calm';
+  }
+
+  // Wind strength tiers (knots) with plain descriptors and colours, loosely
+  // tracking the Beaufort scale but calibrated for small-boat comfort.
+  function windTier(kts){
+    if (kts === null || isNaN(kts)) return { cls:'', word:'', color:'var(--txt)' };
+    if (kts < 1)   return { cls:'calm',   word:'Calm',          color:'#9fb9cf' };
+    if (kts < 7)   return { cls:'light',  word:'Light breeze',  color:'#3ddc97' };
+    if (kts < 12)  return { cls:'gentle', word:'Gentle breeze', color:'#7fd4ff' };
+    if (kts < 17)  return { cls:'mod',    word:'Moderate',      color:'#37c2ff' };
+    if (kts < 22)  return { cls:'fresh',  word:'Fresh breeze',  color:'#ffd166' };
+    if (kts < 28)  return { cls:'strong', word:'Strong breeze', color:'#ff9f43' };
+    if (kts < 34)  return { cls:'gale',   word:'Near gale',     color:'#ff7a59' };
+    return            { cls:'storm',  word:'Gale+',         color:'#ff4d6d' };
+  }
+
+  function renderWaveVisual(heightM, periodSec, tier){
+    const svg = $('waveSvg');
+    const colorMap = { calm:'#3ddc97', moderate:'#ffb347', rough:'#ff4d6d', unknown:'#37c2ff' };
+    const color = colorMap[tier] || colorMap.unknown;
+    // Visual amplitude is exaggerated vs. real metres so small-lake chop
+    // actually reads on a 64px-tall card — purely illustrative, not to scale.
+    const amp = heightM === null ? 6 : Math.min(22, 3 + heightM * 18);
+    const T = (periodSec && !isNaN(Number(periodSec))) ? Number(periodSec) : 3;
+    const wavelenPx = Math.max(26, Math.min(110, T * 18));
+    const animDuration = Math.max(1.1, Math.min(6, T * 0.7));
+
+    function buildPath(){
+      let d = 'M 0 32 ';
+      for (let x = 0; x <= 620; x += 8){
+        const y = 32 + amp * Math.sin((x / wavelenPx) * 2 * Math.PI);
+        d += `L ${x} ${y.toFixed(1)} `;
+      }
+      return d;
+    }
+    const path = buildPath();
+    svg.innerHTML = `
+      <g class="waveAnim" style="animation-duration:${animDuration}s">
+        <path d="${path} L 620 64 L 0 64 Z" fill="${color}" opacity="0.16"/>
+        <path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>`;
+  }
+
+  function parseRows(text){
+    // Some proxies (e.g. jina) wrap the file in extra markdown/title text.
+    // Accept ONLY lines that begin with a 4-digit year — that's a genuine
+    // NDBC data row — so wrapper junk can never be mistaken for a reading.
+    const allLines = text.split('\n');
+    const lines = allLines.filter(l => /^\s*\d{4}\s+\d{1,2}\s+\d{1,2}\s/.test(l));
+    // NDBC's standard column order — built explicitly because the raw header
+    // has both "MM" (month) and "mm" (minute), which collide if lower-cased blindly.
+    // NOTE: PTDY (pressure tendency) sits near the END of the row, after VIS —
+    // not right after PRES. Getting this wrong silently shifts ATMP/WTMP/DEWP/VIS.
+    const COLS = ['yy','month','dd','hh','minute','wdir','wspd','gst','wvht','dpd','apd','mwd','pres','atmp','wtmp','dewp','vis','ptdy','tide'];
+    return lines.map(line=>{
+      const parts = line.trim().split(/\s+/);
+      const row = {};
+      COLS.forEach((key,i)=>{ row[key] = parts[i]; });
+      return row;
+    });
+  }
+
+  function renderSparkline(rows){
+    const svg = $('sparkSvg');
+    const recent = rows.slice(0, 48).reverse();
+    const vals = recent.map(r=>parseFloat(r.wspd)).filter(v=>!isNaN(v));
+    if (!vals.length){ svg.innerHTML=''; return; }
+    const max = Math.max(...vals, 1), min = Math.min(...vals, 0);
+    const range = (max - min) || 1;
+    const w = 300, h = 60, n = vals.length;
+    const pts = vals.map((v,i)=>{
+      const x = (i/(n-1||1)) * w;
+      const y = h - ((v - min)/range) * (h-8) - 4;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    svg.innerHTML = `
+      <polyline points="${pts}" fill="none" stroke="#37c2ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <polygon points="0,${h} ${pts} ${w},${h}" fill="url(#g1)" opacity="0.25"/>
+      <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#37c2ff"/><stop offset="100%" stop-color="#37c2ff" stop-opacity="0"/>
+      </linearGradient></defs>`;
+  }
+
+  function renderLog(rows){
+    const log = $('logCard');
+    const recent = rows.slice(0, 12);
+    log.innerHTML = recent.map(r=>{
+      const t = fmtLocalTime(rowToLocal(r));
+      const w = MM(r.wspd) ? '—' : `${fmt(r.wspd,1)} m/s`;
+      const dir = MM(r.wdir) ? '' : ` ${dirText(Number(r.wdir))} (${r.wdir}°)`;
+      return `<div class="logRow"><div class="t">${t}</div><div>Wind${dir}</div><div class="w">${w}</div></div>`;
+    }).join('');
+  }
+
+  function render(rows){
+    const latest = rows[0];
+    statusDot.className = 'dot ok';
+    statusText.textContent = 'Live';
+
+    $('lastObs').textContent = fmtLocalDateTime(rowToLocal(latest));
+
+    const wspdMs = MM(latest.wspd) ? null : parseFloat(latest.wspd);
+    const wspdKtsNum = wspdMs !== null ? wspdMs * 1.94384 : null;
+    const wspdKts = wspdKtsNum !== null ? wspdKtsNum.toFixed(1) : null;
+    const wspdKph = wspdMs !== null ? (wspdMs * 3.6).toFixed(0) : null;
+    const wt = windTier(wspdKtsNum);
+    const windEl = $('wind');
+    windEl.innerHTML = (wspdKts !== null ? wspdKts : '—') + '<span class="unit">kts</span>';
+    windEl.classList.remove('skel');
+    windEl.style.color = wt.color;
+    $('windKph').innerHTML = wspdKph !== null
+      ? `${wspdKph} km/h${wt.word ? ` · <span style="color:${wt.color}">${wt.word}</span>` : ''}`
+      : '—';
+
+    const wdirDeg = MM(latest.wdir) ? null : Number(latest.wdir);
+    const wdirCompass = dirText(wdirDeg);
+    $('windDir').textContent = wdirDeg === null ? '—' : `from ${wdirCompass} (${Math.round(wdirDeg)}°)`;
+    // Point the red end of the needle toward where the wind is coming FROM.
+    const needle = $('needle');
+    if (needle){
+      if (wdirDeg === null){
+        needle.style.transform = 'rotate(0deg)';
+        needle.style.opacity = '0.35';
+      } else {
+        needle.style.opacity = '1';
+        needle.style.transform = `rotate(${wdirDeg}deg)`;
+      }
+    }
+
+    const gstMs = MM(latest.gst) ? null : parseFloat(latest.gst);
+    const gstKtsNum = gstMs !== null ? gstMs * 1.94384 : null;
+    const gstKts = gstKtsNum !== null ? gstKtsNum.toFixed(1) : null;
+    const gstKph = gstMs !== null ? (gstMs * 3.6).toFixed(0) : null;
+    const gustEl = $('gust');
+    gustEl.classList.remove('skel');
+    if (gstKts !== null){
+      gustEl.innerHTML = gstKts + '<span class="unit">kts</span>';
+      gustEl.style.color = windTier(gstKtsNum).color;
+      $('gustKph').textContent = `${gstKph} km/h`;
+    } else {
+      // This buoy (e.g. Lake Simcoe) doesn't report gust at all.
+      gustEl.innerHTML = '—<span class="unit">kts</span>';
+      gustEl.style.color = 'var(--sub)';
+      $('gustKph').textContent = 'not reported by this buoy';
+    }
+
+    const wvm = MM(latest.wvht) ? null : parseFloat(latest.wvht).toFixed(2);
+    $('waveHeight').innerHTML = (wvm !== null ? wvm : '—') + '<span class="unit">m</span>';
+    $('waveHeight').classList.remove('skel');
+    $('wavePeriod').textContent = MM(latest.dpd) ? 'period —' : `period ${latest.dpd}s`;
+
+    const hM = MM(latest.wvht) ? null : Number(latest.wvht);
+    const stateLabel = seaStateLabel(hM);
+    const character = chopCharacter(hM, latest.dpd);
+    const tier = severityTier(hM);
+    const seaStateText = stateLabel
+      ? `${stateLabel}${character ? ' — ' + character : ''}`
+      : 'sea state —';
+
+    const seaStateEl = $('seaState');
+    seaStateEl.textContent = seaStateText;
+    seaStateEl.className = 'trend' + (tier === 'rough' ? ' rough' : tier === 'moderate' ? ' up' : '');
+
+    const seaStateBigEl = $('seaStateBig');
+    seaStateBigEl.textContent = stateLabel ? seaStateText : 'Waiting on wave data —';
+    seaStateBigEl.style.color = tier === 'rough' ? 'var(--danger)' : tier === 'moderate' ? 'var(--warn)' : tier === 'calm' ? 'var(--good)' : 'var(--sub)';
+
+    renderWaveVisual(hM, latest.dpd, tier);
+
+    const presHpa = MM(latest.pres) ? null : parseFloat(latest.pres).toFixed(1);
+    $('pressure').innerHTML = (presHpa !== null ? presHpa : '—') + '<span class="unit">hPa</span>';
+    $('pressure').classList.remove('skel');
+    const ptdy = parseFloat(latest.ptdy);
+    const trendEl = $('pressureTrend');
+    const plainEl = $('pressurePlain');
+    if (MM(latest.ptdy) || isNaN(ptdy)){
+      trendEl.textContent = '—'; trendEl.className = 'trend';
+      plainEl.textContent = 'Trend not reported';
+    } else {
+      trendEl.textContent = (ptdy > 0 ? '▲ rising ' : ptdy < 0 ? '▼ falling ' : '— steady ') + Math.abs(ptdy).toFixed(1) + ' hPa/3h';
+      trendEl.className = 'trend ' + (ptdy > 0 ? 'down' : ptdy < 0 ? 'up' : '');
+      plainEl.textContent = pressurePlainEnglish(ptdy);
+    }
+
+    const atmpC = MM(latest.atmp) ? null : parseFloat(latest.atmp);
+    $('airTemp').innerHTML = (atmpC !== null ? atmpC.toFixed(1) : '—') + '<span class="unit">°C</span>';
+    $('airTemp').classList.remove('skel');
+    $('airTempF').textContent = atmpC !== null ? `(${(atmpC * 9/5 + 32).toFixed(1)}°F)` : '—';
+
+    const wtmpC = MM(latest.wtmp) ? null : parseFloat(latest.wtmp);
+    const wtmpF = wtmpC !== null ? (wtmpC * 9/5 + 32) : null;
+    $('waterTemp').innerHTML = (wtmpF !== null ? wtmpF.toFixed(1) : '—') + '<span class="unit">°F</span>';
+    $('waterTemp').classList.remove('skel');
+    $('waterTempF').textContent = wtmpC !== null ? `(${wtmpC.toFixed(1)}°C)` : '—';
+
+    renderSparkline(rows);
+    renderLog(rows);
+  }
+
+  async function fetchData(station){
+    refreshBtn.classList.add('spinning');
+    statusDot.className = 'dot loading';
+    statusText.textContent = 'Updating…';
+    const url = dataUrl(station);
+    let text = null;
+    const failures = [];
+    const BUDGET_MS = 18000;
+    const startedAt = Date.now();
+
+    const attempts = [
+      { name: 'direct', fetchUrl: url },
+      ...PROXIES.map((makeUrl, i) => ({ name: 'proxy ' + (i + 1), fetchUrl: makeUrl(url) }))
+    ];
+
+    for (const attempt of attempts){
+      const remaining = BUDGET_MS - (Date.now() - startedAt);
+      if (remaining < 1500) { failures.push(attempt.name + ': skipped (time budget exhausted)'); break; }
+      try {
+        const res = await fetchWithTimeout(attempt.fetchUrl, Math.min(remaining, 6000));
+        if (!res.ok) throw new Error('status ' + res.status);
+        const t = await res.text();
+        if (!looksLikeNdbcData(t)) throw new Error('unexpected response shape');
+        text = t;
+        break;
+      } catch (err) {
+        const msg = err.name === 'AbortError' ? 'timed out' : err.message;
+        failures.push(attempt.name + ': ' + msg);
+      }
+    }
+    const lastErr = text === null ? new Error(failures.join(' · ') || 'all sources failed') : null;
+
+    try {
+      if (text === null) throw lastErr || new Error('all sources failed');
+      const rows = parseRows(text);
+      if (!rows.length) throw new Error('no data rows parsed');
+      // Sanity-check: the newest row must have at least one real measurement,
+      // otherwise we've parsed a wrapper/error page that happened to slip through.
+      const t0 = rows[0];
+      const hasReal = ['wspd','wdir','pres','atmp','wtmp','wvht'].some(k => !MM(t0[k]) && !isNaN(parseFloat(t0[k])));
+      if (!hasReal) throw new Error('no usable values in latest row');
+      saveGood(station, text);
+      errorArea.innerHTML = '';
+      render(rows);
+      statusDot.className = 'dot ok';
+      statusText.textContent = 'Live';
+    } catch (err) {
+      // Refresh failed — but if we have a previous good reading for this
+      // station, keep showing it rather than wiping to dashes.
+      const cached = loadGood(station);
+      if (cached && cached.text){
+        try {
+          const rows = parseRows(cached.text);
+          render(rows);
+          statusDot.className = 'dot loading';
+          statusText.textContent = 'Showing last reading (' + ageText(cached.at) + ')';
+          errorArea.innerHTML = `<div class="errBox" style="background:#1a2740;border-color:#2d4a6b;color:#a9c8e6;"><b>Couldn't refresh just now.</b> Showing the last successful reading from ${ageText(cached.at)}. Tap Refresh to retry — the live feed sometimes rate-limits and recovers on its own.</div>`;
+          return;
+        } catch(e){ /* fall through to hard error */ }
+      }
+      statusDot.className = 'dot error';
+      statusText.textContent = 'Could not load live data';
+      setSkeleton();
+      errorArea.innerHTML = `<div class="errBox"><b>Connection issue.</b> Couldn't reach this buoy's feed (${err.message}). This buoy may be offline for the season, or it's a temporary network hiccup — tap Refresh or try another station above.</div>`;
+    } finally {
+      refreshBtn.classList.remove('spinning');
+    }
+  }
+
+  // ---------- Canadian GEM boating outlook (Open-Meteo, no key, CORS-friendly) ----------
+  let fcData = null;
+
+  function degToCompassShort(deg){
+    const d = dirText(deg);
+    return d || '—';
+  }
+
+  // Crossing-calibrated verdict for open inland water (e.g. Lake Simcoe, ~25 km
+  // fetch). Uses the worse of sustained wind and gusts. Returns plain language.
+  function boatingVerdict(windKts, gustKts){
+    const w = windKts == null ? 0 : windKts;
+    const g = gustKts == null ? w : gustKts;
+    // Pick the tier from whichever factor is worse.
+    let tier;
+    if (w < 10 && g < 16)       tier = 0; // great
+    else if (w < 14 && g < 20)  tier = 1; // good
+    else if (w < 18 && g < 26)  tier = 2; // caution
+    else if (w < 23 && g < 32)  tier = 3; // rough
+    else                         tier = 4; // stay off
+    const T = [
+      {word:'Great day',  color:'#3ddc97', chop:'calm to light ripple',        cross:'easy crossing'},
+      {word:'Good',       color:'#7fd4ff', chop:'light chop',                  cross:'fine for most boats'},
+      {word:'Caution',    color:'#ffd166', chop:'building chop, some whitecaps',cross:'bumpy — smaller boats take care'},
+      {word:'Rough',      color:'#ff9f43', chop:'whitecaps, steep short waves', cross:'wet, hard crossing — not for small craft'},
+      {word:'Stay off',   color:'#ff4d6d', chop:'heavy whitecaps, dangerous chop',cross:'do not attempt to cross'}
+    ][tier];
+    return {tier, ...T};
+  }
+
+  async function fetchForecast(station){
+    const info = STATIONS[station];
+    if (!info || info.lat == null){ $('fcHeadline').textContent = 'No forecast point for this station.'; return; }
+    fcData = null;
+    $('fcHeadline').textContent = 'Reading the Canadian forecast…';
+    $('fcBest').textContent = '';
+    $('fcDays').innerHTML = '';
+    const params = new URLSearchParams({
+      latitude: info.lat, longitude: info.lon,
+      hourly: 'wind_speed_10m,wind_gusts_10m,wind_direction_10m',
+      daily: 'weather_code,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,temperature_2m_max,temperature_2m_min,precipitation_sum',
+      timezone: 'America/Toronto',
+      wind_speed_unit: 'kn',
+      temperature_unit: 'celsius',
+      forecast_days: '7'
+    });
+    const url = 'https://api.open-meteo.com/v1/gem?' + params.toString();
+    try {
+      const res = await fetchWithTimeout(url, 9000);
+      if (!res.ok) throw new Error('status ' + res.status);
+      const j = await res.json();
+      if (!j.hourly || !j.hourly.time || !j.daily) throw new Error('no forecast data');
+      fcData = j;
+      renderOutlook(station);
+    } catch (err) {
+      $('fcHeadline').textContent = '';
+      $('fcHeadline').innerHTML = `Couldn't load the GEM forecast right now (${err.message}). The live buoy reading above still works — and the official ECCC button below is always available.`;
+    }
+  }
+
+  function fcNowIndex(times){
+    const now = Date.now();
+    let idx = 0;
+    for (let i = 0; i < times.length; i++){
+      if (new Date(times[i]).getTime() <= now) idx = i; else break;
+    }
+    return idx;
+  }
+
+  // Build the kid-friendly boat-o-meter SVG for a given verdict tier (0..4).
+  function renderBoatScene(tier){
+    const scene = $('boatScene');
+    if (!scene) return;
+    const rockClass = ['rkCalm','rkGood','rkCaut','rkRough','rkStorm'][tier];
+    const hull = ['#3ddc97','#7fd4ff','#ffd166','#ff9f43','#ff4d6d'][tier];
+
+    // Sky element: sun (calm), cloud (caution/rough), storm cloud (stay off)
+    let sky = '';
+    if (tier <= 1){
+      sky = `<g>
+        <g class="sunRays">
+          ${Array.from({length:8}).map((_,k)=>{
+            const a = (k*45)*Math.PI/180, x1=60+Math.cos(a)*15, y1=34+Math.sin(a)*15, x2=60+Math.cos(a)*23, y2=34+Math.sin(a)*23;
+            return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#ffd24a" stroke-width="2.5" stroke-linecap="round"/>`;
+          }).join('')}
+        </g>
+        <circle cx="60" cy="34" r="12" fill="#ffd24a"/>
+      </g>`;
+    } else if (tier <= 3){
+      sky = `<g class="cloudDrift">
+        <ellipse cx="62" cy="30" rx="22" ry="12" fill="#9fb3c4"/>
+        <ellipse cx="46" cy="34" rx="13" ry="9" fill="#b6c7d6"/>
+        <ellipse cx="78" cy="34" rx="14" ry="9" fill="#8aa0b3"/>
+      </g>`;
+    } else {
+      sky = `<g>
+        <g class="cloudDrift">
+          <ellipse cx="62" cy="28" rx="24" ry="13" fill="#5c6b7a"/>
+          <ellipse cx="44" cy="33" rx="14" ry="10" fill="#6e7d8c"/>
+          <ellipse cx="82" cy="33" rx="15" ry="10" fill="#4a5763"/>
+        </g>
+        <polygon class="bolt" points="60,38 54,54 60,52 56,68 72,48 64,50 70,38" fill="#ffe14a" stroke="#ffb800" stroke-width="1"/>
+        <g class="rain">
+          ${[30,90,170,230,260].map(x=>`<line x1="${x}" y1="44" x2="${x-4}" y2="52" stroke="#9fd0ff" stroke-width="2" stroke-linecap="round"/>`).join('')}
+        </g>
+      </g>`;
+    }
+
+    // Waves: two drifting layers (wider than viewport so the loop is seamless)
+    const wave = (y, fill, cls) => {
+      let d = `M-40 ${y} `;
+      for (let x=-40; x<=380; x+=20){ d += `Q ${x+10} ${y-7} ${x+20} ${y} `; }
+      return `<path class="${cls}" d="${d} L380 120 L-40 120 Z" fill="${fill}"/>`;
+    };
+
+    scene.innerHTML = `<svg viewBox="0 0 300 120" preserveAspectRatio="xMidYMid slice">
+      ${sky}
+      <g class="boatGroup ${rockClass}">
+        <!-- hull -->
+        <path d="M120 70 h60 l-8 16 a6 6 0 0 1 -5 3 h-34 a6 6 0 0 1 -5 -3 z" fill="${hull}"/>
+        <rect x="119" y="66" width="62" height="5" rx="2" fill="#f2f6fa"/>
+        <!-- mast + sail -->
+        <rect x="148" y="40" width="3" height="28" fill="#c9d7e3"/>
+        <path d="M151 42 q18 8 14 24 h-14 z" fill="#eaf3fa"/>
+        <path d="M147 44 q-12 7 -9 22 h9 z" fill="#cfe4f5"/>
+        <!-- little flag -->
+        <path d="M151 40 l8 3 l-8 3 z" fill="${hull}"/>
+      </g>
+      ${wave(86, 'rgba(40,110,160,0.55)', 'seaB')}
+      ${wave(94, 'rgba(20,80,130,0.85)', 'seaA')}
+    </svg>`;
+  }
+
+  // Maps Open-Meteo's WMO weather_code to a simple visual bucket for the
+  // mini forecast icons. Codes per https://open-meteo.com/en/docs (WMO 4677).
+  function wxCategory(code){
+    const c = Number(code);
+    if (isNaN(c)) return 'clear';
+    if (c === 0 || c === 1 || c === 2) return 'clear';
+    if (c === 3 || c === 45 || c === 48) return 'cloudy';
+    if ((c >= 51 && c <= 57) || (c >= 61 && c <= 67) || (c >= 80 && c <= 82)) return 'rain';
+    if ((c >= 71 && c <= 77) || c === 85 || c === 86) return 'snow';
+    if (c === 95 || c === 96 || c === 99) return 'storm';
+    return 'cloudy';
+  }
+
+  // Compact version of the boat-o-meter for the 7-day strip: sky icon comes
+  // from the day's actual weather code (sun/cloud/rain/storm), while the
+  // boat's rocking comes from that day's wind/gust verdict tier — so a windy
+  // clear day still rocks hard, and a calm rainy day stays gentle.
+  function buildWxMiniScene(tier, wxCat){
+    const rockClass = ['rkCalm','rkGood','rkCaut','rkRough','rkStorm'][tier] || 'rkCalm';
+    const hull = ['#3ddc97','#7fd4ff','#ffd166','#ff9f43','#ff4d6d'][tier] || '#3ddc97';
+
+    let sky = '';
+    if (wxCat === 'clear'){
+      sky = `<g class="wxSunRays">
+        ${Array.from({length:8}).map((_,k)=>{
+          const a = (k*45)*Math.PI/180, x1=22+Math.cos(a)*6, y1=14+Math.sin(a)*6, x2=22+Math.cos(a)*10, y2=14+Math.sin(a)*10;
+          return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#ffd24a" stroke-width="2" stroke-linecap="round"/>`;
+        }).join('')}
+        <circle cx="22" cy="14" r="6" fill="#ffd24a"/>
+      </g>`;
+    } else if (wxCat === 'cloudy'){
+      sky = `<g class="cloudDrift">
+        <ellipse cx="26" cy="14" rx="13" ry="7" fill="#9fb3c4"/>
+        <ellipse cx="17" cy="17" rx="8" ry="5.5" fill="#b6c7d6"/>
+        <ellipse cx="34" cy="17" rx="8.5" ry="5.5" fill="#8aa0b3"/>
+      </g>`;
+    } else if (wxCat === 'rain'){
+      sky = `<g>
+        <g class="cloudDrift">
+          <ellipse cx="26" cy="13" rx="12" ry="6.5" fill="#7c8fa0"/>
+          <ellipse cx="17" cy="16" rx="7.5" ry="5" fill="#8fa3b3"/>
+        </g>
+        <g class="rain">
+          ${[14,22,30].map(x=>`<line x1="${x}" y1="20" x2="${x-3}" y2="27" stroke="#9fd0ff" stroke-width="1.6" stroke-linecap="round"/>`).join('')}
+        </g>
+      </g>`;
+    } else if (wxCat === 'snow'){
+      sky = `<g>
+        <g class="cloudDrift">
+          <ellipse cx="26" cy="13" rx="12" ry="6.5" fill="#a8b8c6"/>
+          <ellipse cx="17" cy="16" rx="7.5" ry="5" fill="#bcc9d4"/>
+        </g>
+        <circle cx="14" cy="24" r="1.4" fill="#eaf3fa"/>
+        <circle cx="22" cy="27" r="1.4" fill="#eaf3fa"/>
+        <circle cx="30" cy="24" r="1.4" fill="#eaf3fa"/>
+      </g>`;
+    } else { // storm
+      sky = `<g>
+        <g class="cloudDrift">
+          <ellipse cx="26" cy="12" rx="13" ry="7" fill="#5c6b7a"/>
+          <ellipse cx="16" cy="16" rx="8" ry="5.5" fill="#6e7d8c"/>
+        </g>
+        <polygon class="bolt" points="24,18 20,28 24,27 21,36 30,24 26,25 29,18" fill="#ffe14a" stroke="#ffb800" stroke-width="0.8"/>
+        <g class="rain">
+          ${[12,30].map(x=>`<line x1="${x}" y1="22" x2="${x-2.5}" y2="28" stroke="#9fd0ff" stroke-width="1.5" stroke-linecap="round"/>`).join('')}
+        </g>
+      </g>`;
+    }
+
+    // Seamless wave: the path is built one full wavelength wider than the
+    // drift distance on each side, and the animation shifts by EXACTLY one
+    // wavelength (WL). Because the wave repeats every WL, after shifting one
+    // WL the pattern is pixel-identical to the start — so the CSS loop point
+    // is invisible. ViewBox is 96 wide; we draw from -WL to 96+2*WL so fresh
+    // crests always cover the area the drift exposes.
+    const WL = 16;            // one wave wavelength in px (must match animation)
+    const startX = -WL;
+    const endX = 96 + 2 * WL;
+    const miniWave = (y, fill, cls) => {
+      let d = `M${startX} ${y} `;
+      for (let x = startX; x <= endX; x += WL){
+        // one full sine-like period per WL: up-bump then down-bump
+        d += `q ${WL/4} -3 ${WL/2} 0 q ${WL/4} 3 ${WL/2} 0 `;
+      }
+      return `<path class="${cls}" d="${d} L${endX} 56 L${startX} 56 Z" fill="${fill}"/>`;
+    };
+
+    return `<svg class="wxScene" viewBox="0 0 96 56" preserveAspectRatio="xMidYMid meet">
+      ${sky}
+      <g class="wxBoatGroup ${rockClass}">
+        <path d="M38 40 h20 l-2.5 6 a2.5 2.5 0 0 1 -2 1.2 h-11 a2.5 2.5 0 0 1 -2 -1.2 z" fill="${hull}"/>
+        <rect x="37.6" y="38.5" width="20.8" height="2" rx="1" fill="#f2f6fa"/>
+        <rect x="47" y="26" width="1.4" height="13" fill="#c9d7e3"/>
+        <path d="M48.4 27 q8 4 6 11.5 h-6 z" fill="#eaf3fa"/>
+      </g>
+      ${miniWave(46, 'rgba(40,110,160,0.55)', 'wxSeaB')}
+      ${miniWave(50, 'rgba(20,80,130,0.85)', 'wxSeaA')}
+    </svg>`;
+  }
+
+  // Renders the 7-day graphical strip (sky icon from weather_code, boat
+  // rocking from that day's wind/gust verdict, high/low in °C).
+  function renderWxStrip(){
+    const stripEl = $('wxStrip');
+    if (!stripEl) return;
+    if (!fcData || !fcData.daily || !fcData.daily.time){
+      stripEl.innerHTML = '';
+      return;
+    }
+    const D = fcData.daily;
+    let html = '';
+    for (let i = 0; i < D.time.length; i++){
+      const dname = i === 0 ? 'Today' :
+        new Date(D.time[i] + 'T12:00').toLocaleDateString([], {timeZone:'America/Toronto', weekday:'short'});
+      const tmax = D.temperature_2m_max ? D.temperature_2m_max[i] : null;
+      const tmin = D.temperature_2m_min ? D.temperature_2m_min[i] : null;
+      const code = D.weather_code ? D.weather_code[i] : null;
+      const wxCat = wxCategory(code);
+      const v = boatingVerdict(D.wind_speed_10m_max[i], D.wind_gusts_10m_max[i]);
+      const precip = D.precipitation_sum ? D.precipitation_sum[i] : null;
+      const hiTxt = (tmax !== null && tmax !== undefined && !isNaN(tmax)) ? Math.round(tmax) + '°' : '—';
+      const loTxt = (tmin !== null && tmin !== undefined && !isNaN(tmin)) ? Math.round(tmin) + '°' : '—';
+      const rainTxt = (precip !== null && precip !== undefined && precip >= 0.2) ? (Math.round(precip * 10) / 10) + 'mm' : '';
+      html += `<div class="wxDay">
+        <div class="wxDname">${dname}</div>
+        ${buildWxMiniScene(v.tier, wxCat)}
+        <div class="wxTemps">${hiTxt} <span class="lo">/ ${loTxt}</span></div>
+        ${rainTxt ? `<div class="wxRain">💧 ${rainTxt}</div>` : ''}
+      </div>`;
+    }
+    stripEl.innerHTML = html;
+  }
+
+  function renderOutlook(station){
+    if (!fcData) return;
+    const place = (STATIONS[station] && STATIONS[station].name) || 'this water';
+    const H = fcData.hourly, D = fcData.daily;
+    const start = fcNowIndex(H.time);
+
+    // ---- Next 24h headline (crossing focus) ----
+    const end24 = Math.min(start + 24, H.time.length);
+    let worst = -1, worstIdx = start, calmIdx = -1, calmVal = 1e9;
+    for (let i = start; i < end24; i++){
+      const w = H.wind_speed_10m[i], g = H.wind_gusts_10m[i];
+      const v = boatingVerdict(w, g).tier;
+      if (v > worst){ worst = v; worstIdx = i; }
+      // track calmest hour for a "good window" suggestion
+      const score = Math.max(w, (g||w) * 0.7);
+      if (score < calmVal){ calmVal = score; calmIdx = i; }
+    }
+    const wv = boatingVerdict(H.wind_speed_10m[worstIdx], H.wind_gusts_10m[worstIdx]);
+    const worstW = Math.round(H.wind_speed_10m[worstIdx]);
+    const worstG = Math.round(H.wind_gusts_10m[worstIdx]);
+    const worstDir = degToCompassShort(H.wind_direction_10m[worstIdx]);
+    const worstTime = fmtLocalTime(new Date(H.time[worstIdx]));
+
+    const headEl = $('fcHeadline');
+    headEl.style.borderLeftColor = wv.color;
+    renderBoatScene(wv.tier);
+    let crossLine;
+    if (wv.tier <= 1){
+      crossLine = `<b style="color:${wv.color}">${wv.word} on ${place} over the next 24h.</b> Peak winds only around ${worstW} kts ${worstDir} (gusts ${worstG}) near ${worstTime} — ${wv.cross}, expect ${wv.chop}.`;
+    } else if (wv.tier === 2){
+      crossLine = `<b style="color:${wv.color}">Doable but choppy on ${place} in the next 24h.</b> Winds build to ${worstW} kts ${worstDir}, gusts ${worstG} around ${worstTime} — ${wv.cross}. ${wv.chop} on the crossing.`;
+    } else {
+      crossLine = `<b style="color:${wv.color}">${wv.word} — rough crossing on ${place} in the next 24h.</b> Winds reach ${worstW} kts ${worstDir} with gusts to ${worstG} near ${worstTime}; ${wv.chop}. ${wv.cross}.`;
+    }
+    headEl.innerHTML = crossLine;
+
+    // ---- Good window suggestion within 24h ----
+    const bestEl = $('fcBest');
+    if (wv.tier >= 2 && calmIdx >= 0){
+      const cw = Math.round(H.wind_speed_10m[calmIdx]);
+      const cg = Math.round(H.wind_gusts_10m[calmIdx]);
+      const ct = fmtLocalTime(new Date(H.time[calmIdx]));
+      const cv = boatingVerdict(H.wind_speed_10m[calmIdx], H.wind_gusts_10m[calmIdx]);
+      if (cv.tier <= 2){
+        bestEl.textContent = `Calmest stretch in the next 24h looks like around ${ct} (~${cw} kts, gusts ${cg}) — your best window if you must go.`;
+      } else {
+        bestEl.textContent = `No genuinely calm window in the next 24h — it stays bumpy throughout.`;
+      }
+    } else {
+      bestEl.textContent = '';
+    }
+
+    // ---- 7-day day-by-day ----
+    let bestDayTier = 99, bestDayName = '';
+    let rows = '';
+    for (let i = 0; i < D.time.length; i++){
+      const dname = i === 0 ? 'Today' :
+        new Date(D.time[i] + 'T12:00').toLocaleDateString([], {timeZone:'America/Toronto', weekday:'short'});
+      const wmax = Math.round(D.wind_speed_10m_max[i]);
+      const gmax = Math.round(D.wind_gusts_10m_max[i]);
+      const dir = degToCompassShort(D.wind_direction_10m_dominant[i]);
+      const v = boatingVerdict(D.wind_speed_10m_max[i], D.wind_gusts_10m_max[i]);
+      if (v.tier < bestDayTier){ bestDayTier = v.tier; bestDayName = dname; }
+      const reason = `${dir} wind to ${wmax} kts, gusts ${gmax} — ${v.chop}`;
+      rows += `<div class="fcDay" style="border-left-color:${v.color}">
+        <div><div class="dname">${dname}</div></div>
+        <div>
+          <div class="dverdict" style="color:${v.color}">${v.word}</div>
+          <div class="dreason">${reason}</div>
+        </div>
+      </div>`;
+    }
+    $('fcDays').innerHTML = rows;
+
+    // append best-day callout to the best line
+    if (bestDayName){
+      const extra = `Calmest day this week: ${bestDayName}.`;
+      bestEl.textContent = bestEl.textContent ? bestEl.textContent + ' ' + extra : extra;
+    }
+
+    renderWxStrip();
+  }
+
+
+  function switchStation(station){
+    currentStation = station;
+    const info = STATIONS[station] || { name: 'Buoy ' + station, sub: 'Station ' + station };
+    stationTitle.textContent = info.name;
+    stationSub.textContent = info.sub;
+
+    // official ECCC link
+    const eb = $('ecccBtn'), el = $('ecccLabel');
+    if (info.eccc){ eb.href = info.eccc; eb.style.display = 'flex'; el.textContent = info.ecccLabel || 'Official ECCC marine forecast'; }
+    else { eb.style.display = 'none'; }
+
+    // If we've successfully loaded this station before, paint that immediately
+    // so there's no blank flash while the fresh fetch runs.
+    const cached = loadGood(station);
+    if (cached && cached.text){
+      try { render(parseRows(cached.text)); } catch(e){ setSkeleton(); }
+    } else {
+      setSkeleton();
+      $('lastObs').textContent = '--';
+    }
+
+    fetchData(station);
+    fetchForecast(station);
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = setInterval(()=>{ fetchData(currentStation); fetchForecast(currentStation); }, 10 * 60 * 1000);
+  }
+
+  select.addEventListener('change', (e)=> switchStation(e.target.value));
+  refreshBtn.addEventListener('click', ()=> fetchData(currentStation));
+
+  // Mobile stability: when the tab/PWA is backgrounded, stop the interval so
+  // timers don't pile up (iOS especially throttles then fires them in a burst
+  // on return). On returning to the foreground, refresh once and restart it.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden){
+      if (refreshTimer){ clearInterval(refreshTimer); refreshTimer = null; }
+    } else {
+      fetchData(currentStation);
+      fetchForecast(currentStation);
+      if (!refreshTimer){
+        refreshTimer = setInterval(()=>{ fetchData(currentStation); fetchForecast(currentStation); }, 10 * 60 * 1000);
+      }
+    }
+  });
+
+  window.addEventListener('error', (e) => {
+    errorArea.innerHTML = `<div class="errBox"><b>Unexpected error.</b> ${e.message || 'Something broke while loading the page.'} — this is a bug, not a network issue. Screenshot this if you can.</div>`;
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    errorArea.innerHTML = `<div class="errBox"><b>Unexpected error.</b> ${(e.reason && e.reason.message) || e.reason || 'A background request failed unexpectedly.'}</div>`;
+  });
+
+  switchStation('45151');
+})();
+</script>
+</body>
+</html>

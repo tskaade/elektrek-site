@@ -23,4 +23,28 @@
   // Footer year
   var y = document.getElementById("year");
   if (y) y.textContent = new Date().getFullYear();
+
+  // Marine Forecast: open in a long, narrow (phone-shaped) window on desktop.
+  // Falls back to a normal new tab where the browser ignores the size
+  // (most mobile browsers, strict popup blockers).
+  document.querySelectorAll("[data-popup]").forEach(function (link) {
+    link.addEventListener("click", function (e) {
+      var w = 420;
+      var h = Math.min(900, Math.max(640, window.screen.availHeight - 80));
+      // Center it on screen
+      var left = Math.max(0, (window.screen.availWidth - w) / 2);
+      var top = Math.max(0, (window.screen.availHeight - h) / 2);
+      var features =
+        "width=" + w + ",height=" + h +
+        ",left=" + left + ",top=" + top +
+        ",resizable=yes,scrollbars=yes";
+      var popup = window.open(link.href, "marineForecast", features);
+      // If the popup opened, prevent the default same-tab/new-tab navigation.
+      // If it was blocked (popup === null), let the normal target="_blank" happen.
+      if (popup) {
+        e.preventDefault();
+        popup.focus();
+      }
+    });
+  });
 })();

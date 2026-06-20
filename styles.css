@@ -55,6 +55,14 @@ a{color:inherit}
   transition:color .15s;
 }
 .site-nav a:hover{color:var(--paper)}
+.nav-marine{
+  display:inline-flex;align-items:center;gap:7px;
+}
+.nav-marine .nav-boat{
+  flex:0 0 auto;color:var(--accent-marine, #37c2ff);
+  transition:transform .18s ease;
+}
+.nav-marine:hover .nav-boat{transform:translateY(-1px) rotate(-4deg)}
 .nav-cta{
   color:var(--steel-900)!important;
   background:var(--amber);
@@ -249,7 +257,8 @@ a{color:inherit}
   .gallery{grid-template-columns:1fr;}
 }
 @media(max-width:560px){
-  .site-nav a:not(.nav-cta){display:none}
+  .site-nav a:not(.nav-cta):not(.nav-marine){display:none}
+  .nav-marine span{display:none}
 }
 
 /* ---------- a11y / motion ---------- */
