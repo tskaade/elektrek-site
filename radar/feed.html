@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRT-RADAR — Feed Diagnostic</title>
+<style>
+  body{background:#020a02;color:#22ff66;font-family:'Courier New',monospace;
+       margin:0;padding:16px;line-height:1.5;font-size:15px;}
+  h1{font-size:20px;letter-spacing:2px;margin:0 0 4px;}
+  .sub{color:#0f7a33;font-size:13px;margin-bottom:16px;}
+  button{background:transparent;color:#22ff66;border:1px solid #0f7a33;
+         padding:10px 16px;font-family:inherit;font-size:15px;border-radius:3px;
+         margin-bottom:16px;width:100%;}
+  button:active{background:#0a3d1c;}
+  .row{border:1px solid #0a3d1c;border-radius:3px;padding:10px 12px;margin-bottom:10px;}
+  .name{font-weight:bold;word-break:break-all;}
+  .res{margin-top:4px;font-size:13px;}
+  .ok{color:#22ff66;}
+  .fail{color:#ffb000;}
+  .pending{color:#0f7a33;}
+  .url{color:#0f7a33;font-size:11px;word-break:break-all;margin-top:3px;}
+  .summary{margin-top:16px;padding:12px;border:1px solid #22ff66;border-radius:3px;
+           background:#0a3d1c33;white-space:pre-wrap;font-size:14px;}
+  code{color:#c8ffd8;}
+</style>
+</head>
+<body>
+<h1>CRT-RADAR FEED DIAGNOSTIC</h1>
+<div class="sub">Tests each flight-data path from THIS browser. Run it on the same device/network you use for the radar.</div>
+<button id="run">▶ RUN ALL TESTS</button>
+<div id="results"></div>
+<div class="summary" id="summary" style="display:none"></div>
+
+<script>
+const LAT = 44.032, LON = -79.306, R = 100; // your area; radius in nm
+
+// Each test: a labelled URL builder. We fetch, then check for an `ac` array.
+const TESTS = [
+  { name:'1. adsb.lol (direct)',
+    url:`https://api.adsb.lol/v2/point/${LAT}/${LON}/${R}` },
+  { name:'2. adsb.fi (direct)',
+    url:`https://opendata.adsb.fi/api/v2/lat/${LAT}/lon/${LON}/dist/${R}` },
+  { name:'3. airplanes.live (direct, HTTPS try)',
+    url:`https://api.airplanes.live/v2/point/${LAT}/${LON}/${R}` },
+  { name:'4. corsproxy.io → adsb.lol',
+    url:`https://corsproxy.io/?url=${encodeURIComponent(`https://api.adsb.lol/v2/point/${LAT}/${LON}/${R}`)}` },
+  { name:'5. allorigins → adsb.lol',
+    url:`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://api.adsb.lol/v2/point/${LAT}/${LON}/${R}`)}` },
+  { name:'6. allorigins → adsb.fi',
+    url:`https://api.allorigins.win/raw?url=${encodeURIComponent(`https://opendata.adsb.fi/api/v2/lat/${LAT}/lon/${LON}/dist/${R}`)}` },
+  { name:'7. thingproxy → adsb.lol',
+    url:`https://thingproxy.freeboard.io/fetch/https://api.adsb.lol/v2/point/${LAT}/${LON}/${R}` },
+  { name:'8. codetabs → adsb.lol',
+    url:`https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(`https://api.adsb.lol/v2/point/${LAT}/${LON}/${R}`)}` },
+];
+
+const resultsEl = document.getElementById('results');
+const summaryEl = document.getElementById('summary');
+
+function row(t){
+  const d=document.createElement('div');
+  d.className='row';
+  d.innerHTML=`<div class="name">${t.name}</div>
+    <div class="res pending" id="r${t.id}">… testing</div>
+    <div class="url">${t.url}</div>`;
+  resultsEl.appendChild(d);
+  return d.querySelector('.res');
+}
+
+async function test(t){
+  const el = t.el;
+  const start = performance.now();
+  try{
+    const ctrl = new AbortController();
+    const to = setTimeout(()=>ctrl.abort(), 9000);
+    const res = await fetch(t.url, {cache:'no-store', signal:ctrl.signal,
+                                    headers:{'Accept':'application/json'}});
+    clearTimeout(to);
+    const ms = Math.round(performance.now()-start);
+    if(!res.ok){ el.className='res fail'; el.textContent=`✗ HTTP ${res.status} (${ms}ms)`; return {ok:false}; }
+    const text = await res.text();
+    let data; try{ data=JSON.parse(text); }catch{ el.className='res fail'; el.textContent=`✗ not JSON (${ms}ms)`; return {ok:false}; }
+    const ac = data.ac || data.aircraft;
+    if(Array.isArray(ac)){
+      el.className='res ok';
+      el.textContent=`✓ OK — ${ac.length} aircraft (${ms}ms)`;
+      return {ok:true, n:ac.length, name:t.name};
+    }
+    el.className='res fail'; el.textContent=`✗ JSON but no aircraft field (${ms}ms)`;
+    return {ok:false};
+  }catch(e){
+    const ms = Math.round(performance.now()-start);
+    const why = /abort/i.test(e.message)?'TIMEOUT':(e.message||'blocked (CORS/network)');
+    el.className='res fail';
+    el.textContent=`✗ ${why} (${ms}ms)`;
+    return {ok:false};
+  }
+}
+
+document.getElementById('run').addEventListener('click', async ()=>{
+  resultsEl.innerHTML=''; summaryEl.style.display='none';
+  TESTS.forEach((t,i)=>{ t.id=i; t.el=row(t); });
+  const results=[];
+  for(const t of TESTS){ results.push(await test(t)); }
+  const winners = results.filter(r=>r.ok);
+  summaryEl.style.display='block';
+  if(winners.length){
+    const best = winners.sort((a,b)=>b.n-a.n)[0];
+    summaryEl.innerHTML = `RESULT: ${winners.length} path(s) work.\n\n`+
+      `Best: "${best.name}" returned ${best.n} aircraft.\n\n`+
+      `Tell the assistant which numbers showed ✓ and it will lock the radar to a working path.`;
+  } else {
+    summaryEl.innerHTML = `RESULT: every path failed from this browser/network.\n\n`+
+      `This usually means an ad/tracker blocker, VPN, or DNS filtering is intercepting requests. Try:\n`+
+      `• disable any content blocker / shield for this site\n`+
+      `• turn off VPN or private DNS\n`+
+      `• retest on cellular data instead of Wi-Fi\n\n`+
+      `If it still fails everywhere, a self-hosted Cloudflare Worker is the fix.`;
+  }
+});
+</script>
+</body>
+</html>
