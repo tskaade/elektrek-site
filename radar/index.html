@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#020a02">
+<meta name="description" content="Retro CRT radar with live overhead flight tracking.">
+<title>CRT RADAR — Live Flight Tracking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="crt-vignette"></div>
+<div class="crt-overlay"></div>
+
+<header>
+  <div>
+    <div class="title">CRT-RADAR</div>
+    <div class="sub" id="locLabel">ACQUIRING POSITION…</div>
+  </div>
+  <div class="clock">
+    <span id="clock">--:--:--</span>
+    <small id="zulu">ZULU --:--</small>
+  </div>
+</header>
+
+<div class="stage">
+  <canvas id="scope"></canvas>
+</div>
+
+<div class="status" id="status">INITIALIZING SWEEP…</div>
+
+<div class="contact-card hide" id="card">
+  <button class="card-close" id="cardClose" aria-label="Close">✕</button>
+  <div class="card-call" id="cCall">--------</div>
+  <div class="card-grid">
+    <span class="k">ALT</span><span class="v" id="cAlt">--</span>
+    <span class="k">SPEED</span><span class="v" id="cSpd">--</span>
+    <span class="k">HEADING</span><span class="v" id="cTrk">--</span>
+    <span class="k">VERT</span><span class="v" id="cVrt">--</span>
+    <span class="k">RANGE</span><span class="v" id="cRng">--</span>
+    <span class="k">BEARING</span><span class="v" id="cBrg">--</span>
+    <span class="k">TYPE</span><span class="v" id="cTyp">--</span>
+    <span class="k">REG</span><span class="v" id="cReg">--</span>
+    <span class="k">SQUAWK</span><span class="v" id="cSqk">--</span>
+    <span class="k">ICAO</span><span class="v" id="cIcao">--</span>
+  </div>
+</div>
+
+<footer>
+  <div class="readout">
+    <span>CONTACTS <b id="contacts">0</b></span>
+    <span>HDG <b id="heading">N 000°</b></span>
+    <span>UPD <b id="lastupd">--</b></span>
+  </div>
+  <div class="ctrl-row">
+    <label>RANGE</label>
+    <input type="range" id="range" min="20" max="400" step="10" value="120" aria-label="Radar range in kilometres">
+    <span class="range-val" id="rangeVal">120 km</span>
+  </div>
+  <div class="legend" id="legend">
+    <span class="legend-label">ALT</span>
+    <span class="legend-bar"></span>
+    <span class="legend-lo">LOW</span>
+    <span class="legend-hi">HIGH</span>
+  </div>
+  <div class="btns">
+    <button id="compassBtn">◎ COMPASS</button>
+    <button id="recenterBtn">⌖ RE-CENTER</button>
+  </div>
+</footer>
+
+<script src="js/config.js"></script>
+<script src="js/radar.js"></script>
+</body>
+</html>
