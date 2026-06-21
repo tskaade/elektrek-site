@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ballantrae Barf-o-meter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bungee&family=Space+Mono:wght@400;700&display=swap');
+
+  :root{
+    --foam:#f5e6c8;
+    --amber:#d98a1f;
+    --deep-amber:#b35e10;
+    --danger:#c0392b;
+    --ok:#5fae4a;
+    --ink:#1a1208;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    font-family:'Space Mono',monospace;
+    background:
+      radial-gradient(circle at 20% 10%, #2a1d0a 0%, transparent 50%),
+      radial-gradient(circle at 80% 90%, #2a1d0a 0%, transparent 50%),
+      #120c04;
+    color:var(--foam);
+    min-height:100vh;
+    padding:18px 14px 60px;
+    overflow-x:hidden;
+  }
+  .wrap{max-width:520px;margin:0 auto;}
+
+  h1{
+    font-family:'Bungee',cursive;
+    font-size:clamp(26px,8.5vw,44px);
+    line-height:0.95;
+    text-align:center;
+    color:var(--amber);
+    text-shadow:0 3px 0 var(--deep-amber), 0 6px 12px rgba(0,0,0,.6);
+    letter-spacing:1px;
+    margin-bottom:4px;
+  }
+  .sub{
+    text-align:center;
+    font-size:12px;
+    color:#b9a474;
+    margin-bottom:20px;
+    letter-spacing:1px;
+  }
+
+  /* ---- Beer glass ---- */
+  .glass-stage{
+    display:flex;justify-content:center;align-items:flex-end;
+    height:230px;margin-bottom:6px;position:relative;
+  }
+  .glass{
+    position:relative;width:140px;height:205px;
+    border:4px solid #e9d9b0;
+    border-top:none;
+    border-radius:6px 6px 14px 14px / 6px 6px 30px 30px;
+    background:rgba(255,255,255,.04);
+    overflow:hidden;
+    box-shadow:inset 0 0 18px rgba(0,0,0,.4);
+  }
+  .beer{
+    position:absolute;left:0;right:0;bottom:0;
+    height:0%;
+    background:linear-gradient(180deg,#f4b740 0%, var(--amber) 40%, var(--deep-amber) 100%);
+    transition:height .6s cubic-bezier(.34,1.4,.5,1), background .5s;
+  }
+  .foam{
+    position:absolute;left:0;right:0;top:-10px;height:20px;
+    background:var(--foam);
+    border-radius:50%;
+    filter:blur(.4px);
+  }
+  .bubble{
+    position:absolute;bottom:6px;background:rgba(255,255,255,.55);
+    border-radius:50%;animation:rise linear infinite;
+  }
+  @keyframes rise{
+    0%{transform:translateY(0) scale(1);opacity:.7;}
+    100%{transform:translateY(-175px) scale(.3);opacity:0;}
+  }
+  .counter-badge{
+    position:absolute;top:8px;right:-6px;
+    font-family:'Bungee';font-size:13px;
+    background:var(--ink);color:var(--amber);
+    border:2px solid var(--amber);
+    padding:4px 8px;border-radius:8px;transform:rotate(6deg);
+    z-index:4;
+  }
+
+  .face{
+    position:absolute;left:50%;top:46px;transform:translateX(-50%);
+    font-size:54px;transition:transform .3s;
+    filter:drop-shadow(0 4px 6px rgba(0,0,0,.5));
+    z-index:3;
+  }
+  .wobble{animation:wobble .5s ease-in-out infinite;}
+  @keyframes wobble{
+    0%,100%{transform:translateX(-50%) rotate(-6deg);}
+    50%{transform:translateX(-50%) rotate(6deg);}
+  }
+
+  /* ---- Drink menu ---- */
+  .panel{
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(233,217,176,.18);
+    border-radius:14px;padding:14px;margin-bottom:14px;
+  }
+  .panel-title{font-size:13px;font-weight:700;letter-spacing:.5px;margin-bottom:10px;}
+
+  .drink{
+    display:flex;align-items:center;gap:10px;
+    padding:8px 0;border-bottom:1px solid rgba(233,217,176,.1);
+  }
+  .drink:last-child{border-bottom:none;}
+  .drink .ico{font-size:26px;width:34px;text-align:center;flex-shrink:0;}
+  .drink .info{flex:1;min-width:0;}
+  .drink .nm{font-size:13px;font-weight:700;line-height:1.1;}
+  .drink .pot{font-size:10px;color:#9c895f;margin-top:2px;}
+  .stepper{display:flex;align-items:center;gap:0;flex-shrink:0;}
+  .stepper button{
+    font-family:'Bungee';font-size:18px;width:36px;height:36px;
+    background:var(--amber);color:var(--ink);border:none;
+    cursor:pointer;line-height:1;border-radius:9px;
+    transition:transform .08s, background .15s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .stepper button:active{transform:scale(.86);background:var(--deep-amber);}
+  .stepper .val{
+    font-family:'Bungee';font-size:18px;min-width:34px;text-align:center;color:var(--foam);
+  }
+
+  /* ---- Meal ---- */
+  .seg{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
+  .seg button{
+    flex:1 1 auto;font-family:'Space Mono';font-weight:700;font-size:11px;
+    padding:9px 6px;border:1px solid rgba(233,217,176,.3);
+    background:transparent;color:var(--foam);border-radius:9px;
+    cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;
+    white-space:nowrap;
+  }
+  .seg button.active{background:var(--amber);color:var(--ink);border-color:var(--amber);}
+  .hint{font-size:10px;color:#9c895f;margin-top:8px;line-height:1.3;}
+
+  /* ---- Meter ---- */
+  .meter-shell{
+    height:30px;border-radius:16px;overflow:hidden;margin-top:10px;
+    background:linear-gradient(90deg,var(--ok),#e0c020,#e08020,var(--danger),#5a1a8a);
+    position:relative;border:2px solid var(--ink);
+  }
+  .meter-needle{
+    position:absolute;top:-5px;width:5px;height:38px;
+    background:#fff;border-radius:3px;
+    box-shadow:0 0 8px #fff,0 0 3px var(--ink);
+    left:0%;transition:left .6s cubic-bezier(.34,1.3,.5,1);
+  }
+  .meter-scale{display:flex;justify-content:space-between;font-size:9px;color:#9c895f;margin-top:5px;}
+
+  /* ---- Verdict ---- */
+  .verdict{
+    text-align:center;border-radius:14px;padding:18px 14px;margin-bottom:14px;
+    border:2px solid;transition:all .4s;
+  }
+  .verdict .emoji{font-size:46px;display:block;margin-bottom:6px;}
+  .verdict .status{font-family:'Bungee';font-size:20px;line-height:1.1;margin-bottom:8px;}
+  .verdict .desc{font-size:13px;line-height:1.45;}
+  .tot{font-size:11px;color:#9c895f;margin-top:10px;}
+
+  .reset{
+    display:block;margin:0 auto;background:transparent;color:#9c895f;
+    border:1px solid rgba(233,217,176,.25);border-radius:9px;
+    font-family:'Space Mono';font-weight:700;font-size:11px;
+    padding:8px 18px;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  }
+  .reset:active{background:rgba(255,255,255,.06);}
+
+  .footer{text-align:center;font-size:10px;color:#6f6041;margin-top:18px;line-height:1.5;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Ballantrae<br>Barf-o-meter</h1>
+  <div class="sub">⊹ know thy limit, save thy morning ⊹</div>
+
+  <div class="glass-stage">
+    <div class="face" id="face">😎</div>
+    <div class="glass">
+      <div class="beer" id="beer"><div class="foam"></div></div>
+      <div id="bubbles"></div>
+      <div class="counter-badge" id="badge">0.0</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Pour the count 🍶</div>
+    <div id="menu"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">What's in the stomach?</div>
+    <div class="seg" id="meal">
+      <button data-meal="0.7" data-name="empty">😶 Empty</button>
+      <button data-meal="1" data-name="snacks" class="active">🍿 Snacks</button>
+      <button data-meal="1.35" data-name="meal">🍔 Real meal</button>
+      <button data-meal="1.75" data-name="feast">🍖 Giant feast</button>
+    </div>
+    <div class="hint" id="mealHint">A few chips. Standard tolerance.</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Barf Meter — headache → deathly ill</div>
+    <div class="meter-shell">
+      <div class="meter-needle" id="needle"></div>
+    </div>
+    <div class="meter-scale">
+      <span>Fine</span><span>Headache</span><span>Rough</span><span>Pukey</span><span>RIP</span>
+    </div>
+  </div>
+
+  <div class="verdict" id="verdict">
+    <span class="emoji" id="vEmoji">😎</span>
+    <div class="status" id="vStatus">Stone Cold Sober</div>
+    <div class="desc" id="vDesc">Nothing in the tank yet. The night is young and your liver is innocent.</div>
+    <div class="tot" id="vTot"></div>
+  </div>
+
+  <button class="reset" id="reset">↺ Reset the night</button>
+
+  <div class="footer">
+    Beer is the baseline. Shots and wine punch above their weight — choose wisely.<br>
+    Not medical advice. Drink water. Don't drive.
+  </div>
+</div>
+
+<script>
+  /* Each drink's "potency" = how many standard beer-units it counts as.
+     Mild headache target sits around 4 beer-units on a snacks stomach. */
+  const DRINKS = [
+    {id:"beer",  ico:"🍺", nm:"Regular beer / tall boy", pot:1.0,  note:"the baseline · 1.0×", color:"#d98a1f"},
+    {id:"mixed", ico:"🥃", nm:"Mixed drink",             pot:1.3,  note:"rum & coke, vodka soda · 1.3×", color:"#a9701f"},
+    {id:"fruity",ico:"🍹", nm:"Fruity mixed drink",      pot:1.5,  note:"sugar hides the booze · 1.5×", color:"#e0508a"},
+    {id:"wine",  ico:"🍷", nm:"Glass of wine",           pot:1.6,  note:"sneaky & headache-prone · 1.6×", color:"#7a1f3a"},
+    {id:"shot",  ico:"🥂", nm:"Shot",                    pot:1.8,  note:"chaos in a thimble · 1.8×", color:"#c0392b"}
+  ];
+
+  const counts = {};
+  DRINKS.forEach(d=>counts[d.id]=0);
+
+  let mealMult = 1, mealName = "snacks";
+
+  const mealHints = {
+    empty:  "Empty tank. Everything hits ~40% harder. Bold.",
+    snacks: "A few chips. Standard tolerance.",
+    meal:   "Solid food in there. Soaks up a fair bit.",
+    feast:  "Full feast mode. Your stomach is a sponge."
+  };
+
+  const stages = [
+    {max:1.5,  emoji:"😎", face:"😎", status:"Stone Cold Sober",  color:"#5fae4a",
+     desc:"Nothing in the tank yet. The night is young and your liver is innocent."},
+    {max:3,    emoji:"😄", face:"🍺", status:"Pleasantly Buzzed", color:"#7fb83a",
+     desc:"Loose, funny, generous with the round-buying. Zero regrets at this altitude."},
+    {max:4,    emoji:"😅", face:"😅", status:"The Warning Zone",  color:"#d4b020",
+     desc:"You feel great. That's the trap. One more and the headache fairy clocks in."},
+    {max:5.5,  emoji:"🤕", face:"🥴", status:"Mild Headache Inbound", color:"#e0902a",
+     desc:"That dull thud behind the eyes is tomorrow knocking. Switch to water now, hero."},
+    {max:7,    emoji:"🥴", face:"🥴", status:"Getting Rough",     color:"#e07020",
+     desc:"Room's doing a slow lazy-Susan spin. Everything is suddenly hilarious. It isn't."},
+    {max:9,    emoji:"🤢", face:"🤢", status:"Pukey Territory",   color:"#d04020",
+     desc:"Stomach's filing a formal complaint. Tomorrow is cancelled. Find a couch and a bucket."},
+    {max:999,  emoji:"💀", face:"💀", status:"Deathly Ill — RIP", color:"#9a3aba",
+     desc:"You have summoned the porcelain demon. Hydrate, surrender, and accept your choices were poor."}
+  ];
+
+  const beerEl=document.getElementById('beer'),badge=document.getElementById('badge'),
+        faceEl=document.getElementById('face'),needle=document.getElementById('needle'),
+        bubbles=document.getElementById('bubbles'),mealHint=document.getElementById('mealHint'),
+        vEmoji=document.getElementById('vEmoji'),vStatus=document.getElementById('vStatus'),
+        vDesc=document.getElementById('vDesc'),vTot=document.getElementById('vTot'),
+        verdict=document.getElementById('verdict');
+
+  // build menu
+  const menu=document.getElementById('menu');
+  DRINKS.forEach(d=>{
+    const row=document.createElement('div');
+    row.className='drink';
+    row.innerHTML=`
+      <div class="ico">${d.ico}</div>
+      <div class="info"><div class="nm">${d.nm}</div><div class="pot">${d.note}</div></div>
+      <div class="stepper">
+        <button data-act="minus" data-id="${d.id}" aria-label="one fewer ${d.nm}">–</button>
+        <div class="val" id="v-${d.id}">0</div>
+        <button data-act="plus" data-id="${d.id}" aria-label="one more ${d.nm}">+</button>
+      </div>`;
+    menu.appendChild(row);
+  });
+
+  function rawUnits(){
+    let u=0; DRINKS.forEach(d=>u+=counts[d.id]*d.pot); return u;
+  }
+  function physicalDrinks(){
+    let n=0; DRINKS.forEach(d=>n+=counts[d.id]); return n;
+  }
+  function effective(){ return rawUnits()/mealMult; }
+
+  function pick(eff){ for(const s of stages){ if(eff<s.max) return s; } return stages[stages.length-1]; }
+
+  function dominantColor(){
+    let best=null,bestU=-1;
+    DRINKS.forEach(d=>{const u=counts[d.id]*d.pot; if(u>bestU){bestU=u;best=d;}});
+    return bestU>0?best.color:"#d98a1f";
+  }
+
+  function spawnBubbles(){
+    bubbles.innerHTML="";
+    const n=physicalDrinks();
+    if(n===0)return;
+    const count=Math.min(3+n,14);
+    for(let i=0;i<count;i++){
+      const b=document.createElement('div');b.className='bubble';
+      const size=3+Math.random()*6;
+      b.style.width=size+'px';b.style.height=size+'px';
+      b.style.left=(10+Math.random()*120)+'px';
+      b.style.animationDuration=(1.6+Math.random()*2.2)+'s';
+      b.style.animationDelay=(Math.random()*2)+'s';
+      bubbles.appendChild(b);
+    }
+  }
+
+  function hexA(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;}
+
+  function render(){
+    DRINKS.forEach(d=>document.getElementById('v-'+d.id).textContent=counts[d.id]);
+    const eff=effective(), units=rawUnits(), s=pick(eff);
+
+    beerEl.style.height=Math.min(units/12*100,100)+"%";
+    const c=dominantColor();
+    beerEl.style.background=`linear-gradient(180deg, ${hexA(c,.85)} 0%, ${c} 45%, ${hexA(c,1)} 100%)`;
+
+    badge.textContent=units.toFixed(1);
+    faceEl.textContent=s.face;
+
+    needle.style.left="calc("+Math.min(eff/10*100,100)+"% - 2.5px)";
+
+    vEmoji.textContent=s.emoji;
+    vStatus.textContent=s.status;vStatus.style.color=s.color;
+    vDesc.textContent=s.desc;
+    verdict.style.borderColor=s.color;
+    verdict.style.background=hexA(s.color,.12);
+
+    const phys=physicalDrinks();
+    vTot.textContent = phys===0 ? "" :
+      `${phys} drink${phys>1?"s":""} = ${units.toFixed(1)} beer-units${mealName!=="snacks"?" ("+mealName+" adj.)":""}`;
+
+    if(eff>=4)faceEl.classList.add('wobble');else faceEl.classList.remove('wobble');
+    spawnBubbles();
+  }
+
+  menu.addEventListener('click',e=>{
+    const btn=e.target.closest('button');if(!btn)return;
+    const id=btn.dataset.id;
+    if(btn.dataset.act==="plus")counts[id]=Math.min(counts[id]+1,30);
+    else counts[id]=Math.max(counts[id]-1,0);
+    render();
+  });
+
+  document.querySelectorAll('#meal button').forEach(btn=>{
+    btn.onclick=()=>{
+      document.querySelectorAll('#meal button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      mealMult=parseFloat(btn.dataset.meal);mealName=btn.dataset.name;
+      mealHint.textContent=mealHints[mealName];
+      render();
+    };
+  });
+
+  document.getElementById('reset').onclick=()=>{
+    DRINKS.forEach(d=>counts[d.id]=0);render();
+  };
+
+  render();
+</script>
+</body>
+</html>
