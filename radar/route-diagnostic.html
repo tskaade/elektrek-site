@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRT-RADAR — Route Lookup Diagnostic</title>
+<style>
+  body{background:#020a02;color:#22ff66;font-family:'Courier New',monospace;
+       margin:0;padding:16px;line-height:1.5;font-size:15px;}
+  h1{font-size:20px;letter-spacing:2px;margin:0 0 4px;}
+  .sub{color:#0f7a33;font-size:13px;margin-bottom:16px;}
+  button{background:transparent;color:#22ff66;border:1px solid #0f7a33;
+         padding:10px 16px;font-family:inherit;font-size:15px;border-radius:3px;
+         margin-bottom:16px;width:100%;}
+  button:active{background:#0a3d1c;}
+  .row{border:1px solid #0a3d1c;border-radius:3px;padding:10px 12px;margin-bottom:10px;}
+  .name{font-weight:bold;word-break:break-all;}
+  .res{margin-top:4px;font-size:13px;}
+  .ok{color:#22ff66;} .fail{color:#ffb000;} .pending{color:#0f7a33;}
+  .url{color:#0f7a33;font-size:11px;word-break:break-all;margin-top:3px;}
+  pre{color:#c8ffd8;font-size:11px;white-space:pre-wrap;word-break:break-all;margin:6px 0 0;}
+  .summary{margin-top:16px;padding:12px;border:1px solid #22ff66;border-radius:3px;
+           background:#0a3d1c33;white-space:pre-wrap;font-size:14px;}
+  input{background:#0a3d1c;color:#22ff66;border:1px solid #0f7a33;border-radius:3px;
+        padding:8px;font-family:inherit;font-size:14px;width:100%;margin-bottom:10px;}
+</style>
+</head>
+<body>
+<h1>ROUTE LOOKUP DIAGNOSTIC</h1>
+<div class="sub">Tests whether origin/destination route data can be fetched from this browser. Uses a known airline callsign.</div>
+<input id="cs" value="ACA101" placeholder="callsign e.g. ACA101, WJA1200, AAL100">
+<button id="run">▶ TEST ROUTE LOOKUP</button>
+<div id="results"></div>
+<div class="summary" id="summary" style="display:none"></div>
+
+<script>
+// adsb.lol route endpoint: POST /api/0/routeset
+// body: { planes: [ { callsign, lat, lng } ] }
+// returns: [ { callsign, airport_codes, _airports:[{iata,icao,name,location,...}], ... } ]
+const LAT=44.03, LON=-79.31;
+
+function mkTests(cs){
+  const body = JSON.stringify({ planes:[{ callsign:cs.trim().toUpperCase(), lat:LAT, lng:LON }] });
+  return [
+    { name:'1. adsb.lol /api/0/routeset (direct POST)',
+      url:'https://api.adsb.lol/api/0/routeset', opts:{method:'POST',headers:{'Content-Type':'application/json'},body} },
+    { name:'2. adsb.lol /api/0/routeset via allorigins',
+      url:'https://api.allorigins.win/raw?url='+encodeURIComponent('https://api.adsb.lol/api/0/routeset'),
+      opts:{method:'POST',headers:{'Content-Type':'application/json'},body} },
+  ];
+}
+
+const resultsEl=document.getElementById('results');
+const summaryEl=document.getElementById('summary');
+
+function row(t,i){
+  const d=document.createElement('div');
+  d.className='row';
+  d.innerHTML=`<div class="name">${t.name}</div><div class="res pending" id="r${i}">… testing</div><div class="url">${t.url}</div><pre id="p${i}"></pre>`;
+  resultsEl.appendChild(d);
+  return {res:d.querySelector('.res'), pre:d.querySelector('pre')};
+}
+
+async function test(t,el){
+  const start=performance.now();
+  try{
+    const ctrl=new AbortController();
+    const to=setTimeout(()=>ctrl.abort(),9000);
+    const res=await fetch(t.url,{...t.opts,cache:'no-store',signal:ctrl.signal});
+    clearTimeout(to);
+    const ms=Math.round(performance.now()-start);
+    if(!res.ok){ el.res.className='res fail'; el.res.textContent=`✗ HTTP ${res.status} (${ms}ms)`; return {ok:false}; }
+    const text=await res.text();
+    let data; try{ data=JSON.parse(text); }catch{ el.res.className='res fail'; el.res.textContent=`✗ not JSON (${ms}ms)`; el.pre.textContent=text.slice(0,200); return {ok:false}; }
+    const arr=Array.isArray(data)?data:(data.planes||data);
+    const first=Array.isArray(arr)?arr[0]:arr;
+    const codes=first&&(first.airport_codes||first.route);
+    const airports=first&&(first._airports||first.airports);
+    if(codes||airports){
+      el.res.className='res ok';
+      el.res.textContent=`✓ OK — route data present (${ms}ms)`;
+      el.pre.textContent='codes: '+JSON.stringify(codes)+'\nairports: '+JSON.stringify(airports).slice(0,300);
+      return {ok:true, name:t.name};
+    }
+    el.res.className='res fail'; el.res.textContent=`✗ responded but no route fields (${ms}ms)`;
+    el.pre.textContent=JSON.stringify(data).slice(0,300);
+    return {ok:false};
+  }catch(e){
+    const ms=Math.round(performance.now()-start);
+    const why=/abort/i.test(e.message)?'TIMEOUT':(e.message||'blocked (CORS/network)');
+    el.res.className='res fail'; el.res.textContent=`✗ ${why} (${ms}ms)`;
+    return {ok:false};
+  }
+}
+
+document.getElementById('run').addEventListener('click', async()=>{
+  resultsEl.innerHTML=''; summaryEl.style.display='none';
+  const tests=mkTests(document.getElementById('cs').value||'ACA101');
+  const els=tests.map((t,i)=>row(t,i));
+  const out=[];
+  for(let i=0;i<tests.length;i++){ out.push(await test(tests[i],els[i])); }
+  const win=out.filter(r=>r.ok);
+  summaryEl.style.display='block';
+  summaryEl.textContent = win.length
+    ? `RESULT: route lookup works via "${win[0].name}".\n\nTell the assistant which number worked and it will wire route info into the radar's contact cards.`
+    : `RESULT: route lookup failed from this browser.\n\nThe radar still works fully without it — origin/destination just won't show. Possible causes: the endpoint is down, blocked by a content blocker, or needs a different method. Try a different callsign (one currently flying), or retest on cellular.`;
+});
+</script>
+</body>
+</html>
