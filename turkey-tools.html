@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a1208">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Turkey Tools 🦃 — DNS, WHOIS &amp; IP Lookup</title>
+<style>
+  :root{
+    --bg:#1a1208; --panel:#241a0d; --panel2:#2f2210;
+    --line:#4a3415; --ink:#f5e6c8; --dim:#b89f73;
+    --gobble:#d94f2a; --gobble2:#f0792e; --wattle:#c4202a;
+    --gold:#e8b54a; --green:#7fae4e; --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:radial-gradient(120% 80% at 50% -10%,#2a1d0c 0%,var(--bg) 55%);
+    color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    min-height:100dvh; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:680px;margin:0 auto;padding:18px 16px 60px}
+
+  /* ---- Header / mascot ---- */
+  header{text-align:center;padding:10px 0 4px}
+  .mascot{width:112px;height:112px;margin:0 auto;display:block;cursor:pointer;
+    filter:drop-shadow(0 8px 14px rgba(0,0,0,.5));transition:transform .15s}
+  .mascot:active{transform:scale(.94)}
+  h1{font-size:30px;margin:6px 0 2px;letter-spacing:-.5px;
+    background:linear-gradient(90deg,var(--gold),var(--gobble2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900}
+  .tag{color:var(--dim);font-size:13px;margin:0 0 6px;font-style:italic}
+  .gobble-bubble{display:inline-block;background:var(--gobble);color:#fff;font-size:12px;
+    font-weight:700;padding:5px 12px;border-radius:14px;opacity:0;
+    transform:translateY(-4px);transition:.25s;margin-bottom:2px}
+  .gobble-bubble.show{opacity:1;transform:translateY(0)}
+
+  /* ---- IP banner (always on top) ---- */
+  .ipbanner{background:linear-gradient(135deg,#2f2210,#241a0d);border:1px solid var(--line);
+    border-radius:16px;padding:14px 16px;margin:14px 0;display:flex;align-items:center;
+    gap:14px;flex-wrap:wrap}
+  .ipbanner .lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+  .ipbanner .val{font-family:var(--mono);font-size:22px;font-weight:800;color:var(--gold);word-break:break-all;line-height:1.15}
+  .ipbanner .loc{font-size:13px;color:var(--dim);margin-top:2px}
+  .ipbanner .left{flex:1;min-width:180px}
+  .ipbanner .copy{background:var(--panel2);border:1px solid var(--line);color:var(--dim);font-size:11px;
+    padding:5px 10px;border-radius:8px;cursor:pointer;margin-left:8px;vertical-align:2px}
+
+  /* ---- Tabs ---- */
+  .tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;padding:5px;margin:14px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;border:0;background:transparent;color:var(--dim);font-weight:700;
+    font-size:13px;padding:11px 12px;border-radius:10px;cursor:pointer;transition:.15s;white-space:nowrap}
+  .tab.active{background:linear-gradient(180deg,var(--gobble2),var(--gobble));color:#fff;
+    box-shadow:0 3px 8px rgba(217,79,42,.4)}
+  .tab.adv-toggle{background:var(--panel2);color:var(--gold);border:1px solid var(--line)}
+  .tab.adv-toggle.open{background:var(--gold);color:#241a0d;border-color:var(--gold)}
+  .tab.adv-toggle.has-active{background:linear-gradient(180deg,var(--gobble2),var(--gobble));color:#fff;border-color:transparent}
+
+  /* advanced dropdown */
+  .adv-menu{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--panel);
+    border:1px solid var(--line);border-radius:14px;padding:8px;margin:-6px 0 14px}
+  .adv-item{border:0;background:var(--panel2);color:var(--ink);font-weight:600;font-size:13px;
+    padding:13px 10px;border-radius:10px;cursor:pointer;text-align:left;transition:.12s}
+  .adv-item:active{transform:scale(.97)}
+  .adv-item.active{background:linear-gradient(180deg,var(--gobble2),var(--gobble));color:#fff}
+
+  /* speed test */
+  .speedo{text-align:center;padding:8px 0 4px}
+  .speedo .big{font-family:var(--mono);font-size:46px;font-weight:900;line-height:1;
+    background:linear-gradient(90deg,var(--gold),var(--gobble2));-webkit-background-clip:text;
+    background-clip:text;color:transparent}
+  .speedo .unit{font-size:15px;color:var(--dim);font-weight:700;margin-left:4px}
+  .speedo .phase{font-size:13px;color:var(--dim);margin-top:6px;min-height:18px}
+  .gauge{width:200px;height:110px;margin:6px auto 0;display:block}
+  .metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+  .metric{background:var(--bg);border:1px solid var(--line);border-radius:11px;padding:12px;text-align:center}
+  .metric .mv{font-family:var(--mono);font-size:20px;font-weight:800;color:var(--ink)}
+  .metric .ml{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+  .metric.dl .mv{color:var(--green)} .metric.ul .mv{color:var(--gobble2)}
+
+  /* ---- Cards / inputs ---- */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:16px;margin-bottom:14px}
+  label{display:block;font-size:12px;color:var(--dim);margin:0 0 6px;font-weight:600;
+    text-transform:uppercase;letter-spacing:.5px}
+  .row{display:flex;gap:8px}
+  input[type=text]{flex:1;width:100%;background:var(--bg);border:1px solid var(--line);
+    color:var(--ink);font-size:16px;padding:13px 14px;border-radius:11px;font-family:var(--mono)}
+  input[type=text]:focus{outline:none;border-color:var(--gobble2);box-shadow:0 0 0 3px rgba(240,121,46,.18)}
+  button.go{background:linear-gradient(180deg,var(--gobble2),var(--gobble));color:#fff;
+    border:0;font-weight:800;font-size:15px;padding:0 20px;border-radius:11px;cursor:pointer;white-space:nowrap}
+  button.go:active{transform:translateY(1px)}
+  button.go:disabled{opacity:.5}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .chip{background:var(--panel2);border:1px solid var(--line);color:var(--dim);
+    font-size:12px;font-weight:600;padding:6px 11px;border-radius:20px;cursor:pointer}
+  .chip.on{background:var(--gold);color:#241a0d;border-color:var(--gold)}
+  .chip.who.on{background:var(--gobble2);color:#fff;border-color:var(--gobble2)}
+
+  /* ---- Results ---- */
+  .results{margin-top:4px}
+  .rec-group{margin-bottom:14px}
+  .rec-head{display:flex;align-items:center;gap:8px;margin:0 0 8px}
+  .rec-badge{background:var(--panel2);border:1px solid var(--line);color:var(--gold);
+    font-family:var(--mono);font-size:12px;font-weight:700;padding:3px 9px;border-radius:7px}
+  .rec-badge.who{color:var(--gobble2)}
+  .rec-head .n{color:var(--dim);font-size:12px}
+  .rec{background:var(--bg);border:1px solid var(--line);border-left:3px solid var(--gobble);
+    border-radius:9px;padding:11px 13px;margin-bottom:7px;font-family:var(--mono);
+    font-size:13px;line-height:1.5;word-break:break-word;color:var(--ink)}
+  .rec .meta{color:var(--dim);font-size:11px;display:block;margin-bottom:3px}
+  .verdict{font-size:13px;padding:10px 13px;border-radius:9px;margin-bottom:7px;font-weight:600}
+  .v-ok{background:rgba(127,174,78,.15);border:1px solid var(--green);color:#bcd99a}
+  .v-warn{background:rgba(232,181,74,.13);border:1px solid var(--gold);color:#f0d490}
+  .v-bad{background:rgba(196,32,42,.15);border:1px solid var(--wattle);color:#f0a0a0}
+  .empty{color:var(--dim);font-size:13px;font-style:italic;padding:6px 0}
+
+  /* whois key/val grid */
+  .who-kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13px;
+    background:var(--bg);border:1px solid var(--line);border-left:3px solid var(--gobble2);
+    border-radius:9px;padding:12px 14px}
+  .who-kv .k{color:var(--dim);font-weight:600}
+  .who-kv .v{font-family:var(--mono);word-break:break-word}
+
+  /* ---- IP panel ---- */
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px;margin-top:4px}
+  .kv .k{color:var(--dim);font-weight:600}
+  .kv .v{font-family:var(--mono);word-break:break-word}
+  .bigip{font-family:var(--mono);font-size:24px;font-weight:800;color:var(--gold);
+    word-break:break-all;margin:2px 0 4px}
+  .mapwrap{margin-top:12px;border-radius:13px;overflow:hidden;border:1px solid var(--line);background:#0d0d0d}
+  .mapwrap iframe{display:block;width:100%;height:240px;border:0}
+  .maplink{display:inline-block;margin-top:8px;font-size:12px;color:var(--gobble2);text-decoration:none;font-weight:600}
+  .copy{background:var(--panel2);border:1px solid var(--line);color:var(--dim);font-size:11px;
+    padding:4px 9px;border-radius:7px;cursor:pointer;margin-left:8px;vertical-align:middle}
+
+  .spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.3);
+    border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading{color:var(--dim);font-size:13px;padding:8px 0}
+
+  footer{text-align:center;color:var(--dim);font-size:11px;margin-top:24px;line-height:1.6}
+  .hidden{display:none}
+
+  /* email header parser */
+  textarea#hdrInput{width:100%;min-height:130px;background:var(--bg);border:1px solid var(--line);
+    color:var(--ink);font-size:13px;padding:12px 14px;border-radius:11px;font-family:var(--mono);
+    resize:vertical;line-height:1.45}
+  textarea#hdrInput:focus{outline:none;border-color:var(--gobble2);box-shadow:0 0 0 3px rgba(240,121,46,.18)}
+  .hop{display:flex;gap:10px;background:var(--bg);border:1px solid var(--line);
+    border-left:3px solid var(--gobble);border-radius:9px;padding:10px 13px;margin-bottom:7px}
+  .hop .num{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--panel2);
+    color:var(--gold);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .hop .body{flex:1;font-size:13px;min-width:0}
+  .hop .ht{font-family:var(--mono);font-size:12px;word-break:break-word}
+  .hop .ht b{color:var(--ink)} .hop .ht span{color:var(--dim)}
+  .hop .delay{font-family:var(--mono);font-size:12px;font-weight:700;flex:0 0 auto;text-align:right}
+  .delay.d0{color:var(--green)} .delay.d1{color:var(--gold)} .delay.d2{color:var(--gobble2)} .delay.d3{color:var(--wattle)}
+  .authchips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .authchip{font-size:12px;font-weight:700;padding:5px 11px;border-radius:20px;border:1px solid var(--line)}
+  .authchip.pass{background:rgba(127,174,78,.15);color:#bcd99a;border-color:var(--green)}
+  .authchip.fail{background:rgba(196,32,42,.15);color:#f0a0a0;border-color:var(--wattle)}
+  .authchip.none{background:var(--panel2);color:var(--dim)}
+
+  /* status rows (blacklist, propagation) */
+  .statusrow{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);
+    border-radius:9px;padding:10px 13px;margin-bottom:7px;font-size:13px}
+  .statusrow .dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+  .dot.ok{background:var(--green)} .dot.bad{background:var(--wattle)} .dot.warn{background:var(--gold)}
+  .dot.wait{background:var(--dim);animation:pulse 1s infinite}
+  @keyframes pulse{50%{opacity:.3}}
+  .statusrow .name{flex:1;font-weight:600}
+  .statusrow .val{font-family:var(--mono);color:var(--dim);font-size:12px;text-align:right;word-break:break-word}
+  .statusrow .val.listed{color:#f0a0a0;font-weight:700}
+  .statusrow .val.clean{color:#bcd99a}
+
+  /* mail health score */
+  .score{display:flex;align-items:center;gap:14px;background:var(--bg);border:1px solid var(--line);
+    border-radius:13px;padding:16px;margin-bottom:12px}
+  .score .ring{width:64px;height:64px;flex:0 0 auto}
+  .score .grade{font-size:15px;font-weight:800}
+  .score .sub{font-size:12px;color:var(--dim);margin-top:2px}
+
+  /* subnet result grid */
+  .subgrid{display:grid;grid-template-columns:auto 1fr;gap:7px 16px;font-size:14px;
+    background:var(--bg);border:1px solid var(--line);border-left:3px solid var(--gobble2);
+    border-radius:11px;padding:14px 16px}
+  .subgrid .k{color:var(--dim);font-weight:600}
+  .subgrid .v{font-family:var(--mono);word-break:break-word}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="gobble-bubble" id="bubble"></div>
+    <svg class="mascot" id="mascot" viewBox="0 0 200 200" aria-label="Turkey mascot" role="img">
+      <g>
+        <ellipse cx="100" cy="92" rx="20" ry="62" fill="#8a4a1e"/>
+        <ellipse cx="100" cy="92" rx="18" ry="60" fill="#c4202a" transform="rotate(-38 100 92)"/>
+        <ellipse cx="100" cy="92" rx="18" ry="60" fill="#e8b54a" transform="rotate(38 100 92)"/>
+        <ellipse cx="100" cy="92" rx="17" ry="58" fill="#d94f2a" transform="rotate(-72 100 92)"/>
+        <ellipse cx="100" cy="92" rx="17" ry="58" fill="#7fae4e" transform="rotate(72 100 92)"/>
+        <ellipse cx="100" cy="92" rx="20" ry="62" fill="#a85a22"/>
+      </g>
+      <ellipse cx="100" cy="135" rx="46" ry="44" fill="#5a3a1c"/>
+      <ellipse cx="100" cy="142" rx="30" ry="30" fill="#7a4f26"/>
+      <path d="M86 176 l-7 11 M86 176 l1 13 M86 176 l8 10" stroke="#e8b54a" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M114 176 l-7 11 M114 176 l1 13 M114 176 l8 10" stroke="#e8b54a" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="100" cy="92" r="27" fill="#6b4423"/>
+      <path d="M100 68 q-3 -16 -14 -12 q-8 4 -2 11" fill="#c4202a"/>
+      <circle cx="89" cy="88" r="11" fill="#fff"/>
+      <circle cx="111" cy="88" r="11" fill="#fff"/>
+      <circle cx="93" cy="90" r="5" fill="#000" id="eyeL"/>
+      <circle cx="107" cy="90" r="5" fill="#000" id="eyeR"/>
+      <path d="M97 98 l6 0 l-2 10 z" fill="#e8b54a"/>
+      <path d="M100 106 q-4 14 4 20 q6 -2 4 -12" fill="#c4202a"/>
+      <path d="M100 65 l0 -10 M100 65 l-5 -8 M100 65 l5 -8" stroke="#3a2512" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    </svg>
+    <h1>Turkey Tools</h1>
+    <p class="tag">DNS, WHOIS &amp; IP lookups that won't lay an egg.</p>
+  </header>
+
+  <!-- Always-visible IP banner -->
+  <div class="ipbanner" id="ipBanner">
+    <div class="left">
+      <div class="lbl">Your Public IP</div>
+      <div class="val" id="bannerIP"><span class="spinner"></span></div>
+      <div class="loc" id="bannerLoc">Sniffing the wires…</div>
+    </div>
+    <button class="copy" id="bannerCopy">copy</button>
+  </div>
+
+  <div class="tabs" id="tabBar">
+    <button class="tab active" data-tab="dns">🔍 DNS</button>
+    <button class="tab" data-tab="whois">📜 WHOIS</button>
+    <button class="tab" data-tab="ip">📍 IP Geo</button>
+    <button class="tab" data-tab="speed">⚡ Speed</button>
+    <button class="tab adv-toggle" id="advToggle">🛠️ Advanced ▾</button>
+  </div>
+
+  <div class="adv-menu hidden" id="advMenu">
+    <button class="adv-item" data-tab="mail">📧 Mail Health</button>
+    <button class="adv-item" data-tab="headers">✉️ Header Parser</button>
+    <button class="adv-item" data-tab="blacklist">🚫 Blacklist / RBL</button>
+    <button class="adv-item" data-tab="propagation">🌐 DNS Propagation</button>
+    <button class="adv-item" data-tab="subnet">🧮 Subnet Calc</button>
+  </div>
+
+
+  <!-- ============ DNS PANEL ============ -->
+  <section id="panel-dns">
+    <div class="card">
+      <label for="domain">Domain</label>
+      <div class="row">
+        <input type="text" id="domain" placeholder="example.com" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="url" enterkeyhint="search">
+        <button class="go" id="dnsGo">Gobble</button>
+      </div>
+      <div class="chips" id="typeChips">
+        <span class="chip on" data-t="A">A</span>
+        <span class="chip on" data-t="AAAA">AAAA</span>
+        <span class="chip on" data-t="MX">MX</span>
+        <span class="chip on" data-t="TXT">TXT</span>
+        <span class="chip on" data-t="SPF">SPF</span>
+        <span class="chip on" data-t="DMARC">DMARC</span>
+        <span class="chip on" data-t="DKIM">DKIM</span>
+        <span class="chip on" data-t="NS">NS</span>
+        <span class="chip on" data-t="CNAME">CNAME</span>
+        <span class="chip on" data-t="SOA">SOA</span>
+        <span class="chip on" data-t="CAA">CAA</span>
+        <span class="chip on" data-t="PTR">PTR</span>
+      </div>
+    </div>
+    <div class="results" id="dnsResults"></div>
+  </section>
+
+  <!-- ============ WHOIS PANEL ============ -->
+  <section id="panel-whois" class="hidden">
+    <div class="card">
+      <label for="whoisInput">Domain registration (WHOIS / RDAP)</label>
+      <div class="row">
+        <input type="text" id="whoisInput" placeholder="example.com" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="url" enterkeyhint="search">
+        <button class="go" id="whoisGo">Lookup</button>
+      </div>
+    </div>
+    <div class="results" id="whoisResults"></div>
+  </section>
+
+  <!-- ============ MAIL HEALTH PANEL ============ -->
+  <section id="panel-mail" class="hidden">
+    <div class="card">
+      <label for="mailInput">Mail deliverability check (MX · SPF · DMARC · DKIM)</label>
+      <div class="row">
+        <input type="text" id="mailInput" placeholder="example.com" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="url" enterkeyhint="search">
+        <button class="go" id="mailGo">Check</button>
+      </div>
+    </div>
+    <div class="results" id="mailResults"></div>
+  </section>
+
+  <!-- ============ EMAIL HEADER PARSER PANEL ============ -->
+  <section id="panel-headers" class="hidden">
+    <div class="card">
+      <label for="hdrInput">Paste raw email headers</label>
+      <textarea id="hdrInput" placeholder="Paste the full email source / headers here (Received:, Authentication-Results:, etc.)" spellcheck="false"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="go" id="hdrGo" style="flex:1">Parse Headers</button>
+        <button class="go" id="hdrClear" style="background:var(--panel2);color:var(--dim);border:1px solid var(--line)">Clear</button>
+      </div>
+      <div class="empty" style="margin-top:6px">Tip: in Outlook use File → Properties → Internet headers; in Gmail open the message → ⋮ → "Show original".</div>
+    </div>
+    <div class="results" id="hdrResults"></div>
+  </section>
+
+  <!-- ============ BLACKLIST PANEL ============ -->
+  <section id="panel-blacklist" class="hidden">
+    <div class="card">
+      <label for="blInput">Blacklist / RBL check (domain or mail-server IP)</label>
+      <div class="row">
+        <input type="text" id="blInput" placeholder="example.com or 1.2.3.4" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="url" enterkeyhint="search">
+        <button class="go" id="blGo">Check</button>
+      </div>
+    </div>
+    <div class="results" id="blResults"></div>
+  </section>
+
+  <!-- ============ PROPAGATION PANEL ============ -->
+  <section id="panel-propagation" class="hidden">
+    <div class="card">
+      <label for="propInput">DNS propagation — compare public resolvers</label>
+      <div class="row">
+        <input type="text" id="propInput" placeholder="example.com" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="url" enterkeyhint="search">
+        <button class="go" id="propGo">Compare</button>
+      </div>
+      <div class="chips" id="propChips">
+        <span class="chip on" data-t="A">A</span>
+        <span class="chip" data-t="AAAA">AAAA</span>
+        <span class="chip" data-t="MX">MX</span>
+        <span class="chip" data-t="TXT">TXT</span>
+        <span class="chip" data-t="NS">NS</span>
+        <span class="chip" data-t="CNAME">CNAME</span>
+      </div>
+    </div>
+    <div class="results" id="propResults"></div>
+  </section>
+
+  <!-- ============ SUBNET PANEL ============ -->
+  <section id="panel-subnet" class="hidden">
+    <div class="card">
+      <label for="subInput">Subnet / CIDR calculator</label>
+      <div class="row">
+        <input type="text" id="subInput" placeholder="192.168.1.0/24" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" enterkeyhint="go">
+        <button class="go" id="subGo">Calc</button>
+      </div>
+    </div>
+    <div class="results" id="subResults"></div>
+  </section>
+
+  <!-- ============ SPEED TEST PANEL ============ -->
+  <section id="panel-speed" class="hidden">
+    <div class="card">
+      <div class="speedo">
+        <svg class="gauge" id="gauge" viewBox="0 0 200 110">
+          <path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#3a2512" stroke-width="12" stroke-linecap="round"/>
+          <path id="gaugeFill" d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="url(#gg)" stroke-width="12"
+            stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="251"/>
+          <defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#7fae4e"/><stop offset="0.6" stop-color="#e8b54a"/><stop offset="1" stop-color="#f0792e"/>
+          </linearGradient></defs>
+        </svg>
+        <div><span class="big" id="speedBig">0</span><span class="unit" id="speedUnit">Mbps</span></div>
+        <div class="phase" id="speedPhase">Tap below to test your connection.</div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="go" id="speedGo" style="flex:1;padding:14px">⚡ Start Speed Test</button>
+      </div>
+      <div class="metrics" id="speedMetrics" style="display:none">
+        <div class="metric dl"><div class="mv" id="mDL">–</div><div class="ml">Download Mbps</div></div>
+        <div class="metric ul"><div class="mv" id="mUL">–</div><div class="ml">Upload Mbps</div></div>
+        <div class="metric"><div class="mv" id="mPing">–</div><div class="ml">Ping ms</div></div>
+        <div class="metric"><div class="mv" id="mJit">–</div><div class="ml">Jitter ms</div></div>
+      </div>
+    </div>
+    <div class="results" id="speedNote"></div>
+  </section>
+
+  <!-- ============ IP PANEL ============ -->
+  <section id="panel-ip" class="hidden">
+    <div class="card">
+      <label>Look up any IP (blank = your own)</label>
+      <div class="row">
+        <input type="text" id="ipInput" placeholder="leave blank for your IP" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text" enterkeyhint="search">
+        <button class="go" id="ipGo">Hunt</button>
+      </div>
+    </div>
+    <div class="results" id="ipResults"></div>
+  </section>
+
+  <footer>
+    Made with 🦃 by Turkey Tools · DNS/DoH: Google · Cloudflare · AdGuard · WHOIS: RDAP · Speed: Cloudflare · Geo: GeoJS/FreeIPAPI<br>
+    Geolocation is approximate. No data stored.
+  </footer>
+</div>
+
+<script>
+/* ---------- mascot gobble ---------- */
+const gobbles=["Gobble gobble!","I'm not stuffed yet.","Talkin' turkey 🦃","Wattle you lookin' up?","Pleh.","Beak-onomics.","Fowl play detected.","DNS? Delicious Nutritious Stuffing.","gobblegobblegobble","Who dat domain?"];
+const bubble=document.getElementById('bubble'), mascot=document.getElementById('mascot');
+const eyeL=document.getElementById('eyeL'), eyeR=document.getElementById('eyeR');
+mascot.addEventListener('click',()=>{
+  bubble.textContent=gobbles[Math.floor(Math.random()*gobbles.length)];
+  bubble.classList.add('show');
+  eyeL.setAttribute('cx',85+Math.random()*8); eyeR.setAttribute('cx',103+Math.random()*8);
+  clearTimeout(mascot._t); mascot._t=setTimeout(()=>bubble.classList.remove('show'),1800);
+});
+
+/* ---------- tabs ---------- */
+const ALL_TABS=['dns','whois','ip','speed','mail','headers','blacklist','propagation','subnet'];
+const PRIMARY=['dns','whois','ip','speed'];
+const advToggle=document.getElementById('advToggle');
+const advMenu=document.getElementById('advMenu');
+
+function showPanel(tab){
+  ALL_TABS.forEach(name=>{
+    const p=document.getElementById('panel-'+name);
+    if(p) p.classList.toggle('hidden',tab!==name);
+  });
+  // primary tab highlight
+  document.querySelectorAll('#tabBar .tab[data-tab]').forEach(x=>{
+    if(x.dataset.tab) x.classList.toggle('active',x.dataset.tab===tab);
+  });
+  // advanced item highlight + toggle button state
+  let isAdv=!PRIMARY.includes(tab);
+  document.querySelectorAll('.adv-item').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));
+  advToggle.classList.toggle('has-active',isAdv);
+  advToggle.classList.toggle('active',false);
+}
+
+// primary tabs
+document.querySelectorAll('#tabBar .tab[data-tab]').forEach(t=>t.onclick=()=>{
+  closeAdv();
+  showPanel(t.dataset.tab);
+});
+// advanced toggle
+function closeAdv(){ advMenu.classList.add('hidden'); advToggle.classList.remove('open'); }
+advToggle.onclick=()=>{
+  const open=advMenu.classList.toggle('hidden')===false;
+  advToggle.classList.toggle('open',open);
+};
+// advanced items
+document.querySelectorAll('.adv-item').forEach(it=>it.onclick=()=>{
+  closeAdv();
+  showPanel(it.dataset.tab);
+  if(it.dataset.tab==='ip'){}
+});
+
+function esc(s){ return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+/* ====================================================================
+   IP GEOLOCATION  — fallback chain so it actually loads
+   ==================================================================== */
+// flag emoji from ISO country code (so we don't depend on a provider returning one)
+function flagOf(cc){
+  if(!cc||cc.length!==2)return'🌐';
+  try{ return String.fromCodePoint(...[...cc.toUpperCase()].map(c=>0x1F1E6+c.charCodeAt(0)-65)); }
+  catch(e){ return '🌐'; }
+}
+// Reliable plain "what's my IP" — used so the IP always shows even if geo is rate-limited.
+async function getMyIP(){
+  const srcs=[
+    {u:'https://get.geojs.io/v1/ip.json',f:d=>d.ip},
+    {u:'https://api.ipify.org?format=json',f:d=>d.ip},
+    {u:'https://ipapi.co/ip/',f:d=>typeof d==='string'?d.trim():''}
+  ];
+  for(const s of srcs){
+    try{
+      const r=await fetch(s.u);
+      if(!r.ok)continue;
+      const ct=r.headers.get('content-type')||'';
+      const d=ct.includes('json')?await r.json():await r.text();
+      const ip=s.f(d);
+      if(ip)return ip;
+    }catch(e){}
+  }
+  return '';
+}
+// Full geolocation. These all support HTTPS + browser CORS + no key (as of 2026).
+async function geoLookup(ip){
+  // provider 1: geojs.io  (CORS:*, no key, no browser block)
+  try{
+    const path=ip?encodeURIComponent(ip)+'.json':'';
+    const url=ip?('https://get.geojs.io/v1/ip/geo/'+path):'https://get.geojs.io/v1/ip/geo.json';
+    const r=await fetch(url);
+    if(r.ok){ const d=await r.json(); const o=Array.isArray(d)?d[0]:d;
+      if(o && (o.ip||o.latitude)) return normGeojs(o); }
+  }catch(e){}
+  // provider 2: freeipapi.com  (CORS, no key, HTTPS)
+  try{
+    const url='https://free.freeipapi.com/api/json/'+(ip?encodeURIComponent(ip):'');
+    const r=await fetch(url);
+    if(r.ok){ const d=await r.json(); if(d && d.ipAddress) return normFree(d); }
+  }catch(e){}
+  // provider 3: ipapi.co  (CORS, no key, but stricter rate limit)
+  try{
+    const path=ip?encodeURIComponent(ip)+'/json/':'json/';
+    const r=await fetch('https://ipapi.co/'+path);
+    if(r.ok){ const d=await r.json(); if(d && !d.error && d.ip) return normIpapi(d); }
+  }catch(e){}
+  // last resort: at least return the IP with no geo
+  const myip=ip||await getMyIP();
+  if(myip) return {ip:myip,city:'',region:'',country:'',lat:null,lng:null,
+    postal:'',tz:'',isp:'',org:'',asn:'',type:'',flag:'🌐',partial:true};
+  return null;
+}
+function normGeojs(d){
+  return {ip:d.ip||'',city:d.city||'',region:d.region||'',country:d.country||'',
+    lat:d.latitude?parseFloat(d.latitude):null,lng:d.longitude?parseFloat(d.longitude):null,
+    postal:'',tz:d.timezone||'',isp:d.organization_name||'',org:d.organization||d.organization_name||'',
+    asn:d.asn?('AS'+d.asn):'',type:'',flag:flagOf(d.country_code)};
+}
+function normFree(d){
+  return {ip:d.ipAddress||'',city:d.cityName||'',region:d.regionName||'',country:d.countryName||'',
+    lat:(d.latitude!=null)?d.latitude:null,lng:(d.longitude!=null)?d.longitude:null,
+    postal:d.zipCode||'',tz:Array.isArray(d.timeZones)?d.timeZones[0]:(d.timeZone||''),
+    isp:'',org:'',asn:'',type:'',flag:flagOf(d.countryCode)};
+}
+function normIpapi(d){
+  return {ip:d.ip,city:d.city||'',region:d.region||'',country:d.country_name||'',
+    lat:d.latitude,lng:d.longitude,postal:d.postal||'',
+    tz:d.timezone?d.timezone+(d.utc_offset?' (UTC'+d.utc_offset+')':''):'',
+    isp:d.org||'',org:d.org||'',asn:d.asn||'',type:'',flag:flagOf(d.country_code)};
+}
+
+/* ---- top banner ---- */
+let myGeo=null;
+async function loadBanner(){
+  const ipEl=document.getElementById('bannerIP'), locEl=document.getElementById('bannerLoc');
+  // 1) get the IP first so it always appears
+  const ip=await getMyIP();
+  if(ip){ ipEl.textContent=ip; locEl.textContent='Looking up location…'; }
+  // 2) then enrich with geo
+  const g=await geoLookup(ip||'');
+  if(!g){
+    if(ip){ locEl.textContent='Location unavailable right now.'; myGeo={ip}; }
+    else{ ipEl.textContent='—'; locEl.textContent='Couldn\'t reach the network. Try refreshing.'; }
+    return;
+  }
+  myGeo=g;
+  ipEl.textContent=g.ip||ip||'—';
+  const loc=[g.city,g.region,g.country].filter(Boolean).map(esc).join(', ');
+  locEl.innerHTML=(g.flag||'🌐')+' '+(loc||'Location unavailable')+(g.isp?' · '+esc(g.isp):'');
+}
+document.getElementById('bannerCopy').onclick=()=>{
+  if(!myGeo)return;
+  navigator.clipboard&&navigator.clipboard.writeText(myGeo.ip);
+  const b=document.getElementById('bannerCopy'); b.textContent='copied!';
+  setTimeout(()=>b.textContent='copy',1200);
+};
+loadBanner();
+
+/* ---- IP Geo panel ---- */
+const ipResults=document.getElementById('ipResults');
+document.getElementById('ipGo').onclick=()=>runIP(document.getElementById('ipInput').value.trim());
+document.getElementById('ipInput').addEventListener('keydown',e=>{if(e.key==='Enter')runIP(e.target.value.trim());});
+let ipPanelLoaded=false;
+document.querySelector('[data-tab="ip"]').addEventListener('click',()=>{
+  if(!ipPanelLoaded){ ipPanelLoaded=true; runIP(''); }
+});
+
+async function runIP(ip){
+  ipResults.innerHTML='<div class="loading"><span class="spinner"></span> Tracking the IP…</div>';
+  const g=await geoLookup(ip);
+  if(!g){ ipResults.innerHTML='<div class="card"><div class="verdict v-bad">Couldn\'t track that one — check the IP and try again.</div></div>'; return; }
+  const manual=document.getElementById('ipInput').value.trim();
+  let html='<div class="card">'+
+    '<label>'+(manual?'IP Address':'Your Public IP')+'</label>'+
+    '<div class="bigip">'+esc(g.ip)+'<button class="copy" id="cp">copy</button></div>'+
+    (g.partial?'<div class="verdict v-warn">🟡 Got the IP, but geo providers are rate-limited right now. Try again in a minute for full location.</div>':'')+
+    '<div class="kv">'+
+      kv('Location',(g.flag||'🌐')+' '+([g.city,g.region,g.country].filter(Boolean).map(esc).join(', ')||'—'))+
+      kv('Postal',esc(g.postal||'—'))+
+      kv('Coords',(g.lat!=null?esc(g.lat+', '+g.lng):'—'))+
+      kv('Timezone',esc(g.tz||'—'))+
+      kv('ISP',esc(g.isp||'—'))+
+      kv('Org',esc(g.org||'—'))+
+      kv('ASN',esc(g.asn||'—'))+
+      (g.type?kv('Type',esc(g.type)):'')+
+      '<div class="k">Reverse DNS</div><div class="v" id="rdnsVal">looking up…</div>'+
+    '</div>';
+  if(g.lat!=null && g.lng!=null){
+    const q=g.lat+','+g.lng;
+    html+='<div class="mapwrap"><iframe loading="lazy" referrerpolicy="no-referrer-when-downgrade" '+
+      'src="https://maps.google.com/maps?q='+q+'&z=11&output=embed"></iframe></div>'+
+      '<a class="maplink" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query='+q+'">Open in Google Maps ↗</a>';
+  }
+  html+='</div>';
+  ipResults.innerHTML=html;
+  // reverse DNS (PTR) — fill in async
+  if(g.ip && /^(\d{1,3}\.){3}\d{1,3}$/.test(g.ip)){
+    const rev=g.ip.split('.').reverse().join('.')+'.in-addr.arpa';
+    const ptr=rdata(await query(rev,'PTR'),'PTR').map(clean);
+    const el=document.getElementById('rdnsVal');
+    if(el) el.textContent=ptr.length?ptr.join(', '):'(none)';
+  } else {
+    const el=document.getElementById('rdnsVal'); if(el) el.textContent='—';
+  }
+  const cp=document.getElementById('cp');
+  if(cp)cp.onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(g.ip);cp.textContent='copied!';};
+}
+function kv(k,v){ return '<div class="k">'+k+'</div><div class="v">'+v+'</div>'; }
+
+/* ====================================================================
+   DNS  (DoH)
+   ==================================================================== */
+const DOH=[
+  {n:'Google',u:'https://dns.google/resolve?'},
+  {n:'Cloudflare',u:'https://cloudflare-dns.com/dns-query?'}
+];
+const NUM={A:1,NS:2,CNAME:5,SOA:6,PTR:12,MX:15,TXT:16,AAAA:28,CAA:257};
+async function query(name,type){
+  for(const p of DOH){
+    try{
+      const r=await fetch(p.u+'name='+encodeURIComponent(name)+'&type='+type,{headers:{accept:'application/dns-json'}});
+      if(r.ok) return await r.json();
+    }catch(e){}
+  }
+  return null;
+}
+function rdata(ans,want){ return (ans&&ans.Answer?ans.Answer:[]).filter(a=>a.type===NUM[want]).map(a=>a.data); }
+function clean(s){ return String(s).replace(/^"|"$/g,'').replace(/" "/g,''); }
+
+document.querySelectorAll('#typeChips .chip').forEach(c=>c.onclick=()=>c.classList.toggle('on'));
+const dnsResults=document.getElementById('dnsResults');
+document.getElementById('dnsGo').onclick=runDNS;
+document.getElementById('domain').addEventListener('keydown',e=>{if(e.key==='Enter')runDNS();});
+
+async function runDNS(){
+  let d=document.getElementById('domain').value.trim().toLowerCase()
+        .replace(/^https?:\/\//,'').replace(/\/.*$/,'').replace(/^www\./,'');
+  if(!d){ dnsResults.innerHTML='<div class="empty">Type a domain first, ya turkey.</div>'; return; }
+  const types=[...document.querySelectorAll('#typeChips .chip.on')].map(c=>c.dataset.t);
+  dnsResults.innerHTML='<div class="loading"><span class="spinner"></span> Pecking through DNS for <b>'+esc(d)+'</b>…</div>';
+  const btn=document.getElementById('dnsGo'); btn.disabled=true;
+  let html='';
+  for(const t of types){
+    if(t==='SPF'){
+      const spf=rdata(await query(d,'TXT'),'TXT').map(clean).filter(x=>/^v=spf1/i.test(x));
+      html+=group('SPF',spf.map(esc),spfVerdict(spf)); continue;
+    }
+    if(t==='DMARC'){
+      const dm=rdata(await query('_dmarc.'+d,'TXT'),'TXT').map(clean).filter(x=>/^v=DMARC1/i.test(x));
+      html+=group('DMARC',dm.map(esc),dmarcVerdict(dm)); continue;
+    }
+    if(t==='DKIM'){
+      let found=[];
+      for(const sel of ['default','google','selector1','selector2','k1','s1','dkim','mail']){
+        const recs=rdata(await query(sel+'._domainkey.'+d,'TXT'),'TXT').map(clean).filter(x=>/(v=DKIM1|p=)/i.test(x));
+        recs.forEach(r=>found.push('<span class="meta">selector: '+esc(sel)+'</span>'+esc(r)));
+      }
+      html+=groupRaw('DKIM',found,found.length?'':'No DKIM on common selectors. Selectors are custom — check your mail provider.');
+      continue;
+    }
+    if(t==='PTR'){
+      const a=rdata(await query(d,'A'),'A');
+      if(!a.length){ html+=group('PTR (reverse)',[],'No A record to reverse.'); continue; }
+      let ptrs=[];
+      for(const ip of a.slice(0,3)){
+        const rev=ip.split('.').reverse().join('.')+'.in-addr.arpa';
+        rdata(await query(rev,'PTR'),'PTR').forEach(x=>ptrs.push(esc(ip)+' → '+esc(x)));
+      }
+      html+=groupRaw('PTR (reverse)',ptrs); continue;
+    }
+    let recs=rdata(await query(d,t),t).map(clean);
+    if(t==='MX') recs=recs.sort((a,b)=>parseInt(a)-parseInt(b));
+    html+=group(t,recs.map(esc));
+  }
+  dnsResults.innerHTML=html||'<div class="empty">Nothing found.</div>';
+  btn.disabled=false;
+}
+function group(type,recs,verdict){ return groupRaw(type,recs,verdict); }
+function groupRaw(type,items,verdict){
+  let h='<div class="rec-group"><div class="rec-head"><span class="rec-badge">'+type+
+        '</span><span class="n">'+items.length+' record'+(items.length===1?'':'s')+'</span></div>';
+  if(verdict) h+=verdictBox(verdict);
+  if(items.length) items.forEach(i=>h+='<div class="rec">'+i+'</div>');
+  else if(!verdict) h+='<div class="empty">No '+type+' records found.</div>';
+  return h+'</div>';
+}
+function verdictBox(v){
+  if(typeof v==='string') return '<div class="empty">'+esc(v)+'</div>';
+  return '<div class="verdict v-'+v.lvl+'">'+v.msg+'</div>';
+}
+function spfVerdict(spf){
+  if(!spf.length) return {lvl:'bad',msg:'⚠️ No SPF record — your domain can be spoofed. Add a v=spf1 record.'};
+  if(spf.length>1) return {lvl:'bad',msg:'⚠️ Multiple SPF records — invalid. You may only have one.'};
+  const r=spf[0];
+  if(/-all/.test(r)) return {lvl:'ok',msg:'✅ SPF present with hard fail (-all) — strict and good.'};
+  if(/~all/.test(r)) return {lvl:'warn',msg:'🟡 SPF present with soft fail (~all). Consider -all once confident.'};
+  if(/\+all/.test(r)) return {lvl:'bad',msg:'⚠️ SPF uses +all — allows anyone to send. Bad.'};
+  return {lvl:'warn',msg:'🟡 SPF present but no all mechanism found.'};
+}
+function dmarcVerdict(dm){
+  if(!dm.length) return {lvl:'bad',msg:'⚠️ No DMARC record — add one at _dmarc to control spoofing.'};
+  const p=(dm[0].match(/p=(\w+)/)||[])[1];
+  if(p==='reject') return {lvl:'ok',msg:'✅ DMARC p=reject — strongest protection.'};
+  if(p==='quarantine') return {lvl:'ok',msg:'✅ DMARC p=quarantine — solid protection.'};
+  if(p==='none') return {lvl:'warn',msg:'🟡 DMARC p=none — monitoring only. Move to quarantine/reject.'};
+  return {lvl:'warn',msg:'🟡 DMARC present.'};
+}
+
+/* ====================================================================
+   WHOIS / RDAP
+   ==================================================================== */
+const whoisResults=document.getElementById('whoisResults');
+document.getElementById('whoisGo').onclick=runWhois;
+document.getElementById('whoisInput').addEventListener('keydown',e=>{if(e.key==='Enter')runWhois();});
+
+async function runWhois(){
+  let d=document.getElementById('whoisInput').value.trim().toLowerCase()
+        .replace(/^https?:\/\//,'').replace(/\/.*$/,'').replace(/^www\./,'');
+  if(!d){ whoisResults.innerHTML='<div class="empty">Type a domain first, ya turkey.</div>'; return; }
+  whoisResults.innerHTML='<div class="loading"><span class="spinner"></span> Digging up registration for <b>'+esc(d)+'</b>…</div>';
+  const btn=document.getElementById('whoisGo'); btn.disabled=true;
+  let data=null;
+  // RDAP via rdap.org bootstrap (follows redirect to authoritative registry, CORS-enabled)
+  try{
+    const r=await fetch('https://rdap.org/domain/'+encodeURIComponent(d));
+    if(r.ok) data=await r.json();
+  }catch(e){}
+  if(!data){
+    // fallback: who-dat normalized API
+    try{
+      const r=await fetch('https://who-dat.as93.net/'+encodeURIComponent(d));
+      if(r.ok){ const w=await r.json(); whoisResults.innerHTML=renderWhoDat(w,d); btn.disabled=false; return; }
+    }catch(e){}
+    whoisResults.innerHTML='<div class="card"><div class="verdict v-bad">No registration data found. The TLD may not support RDAP (some ccTLDs don\'t), or the domain isn\'t registered.</div></div>';
+    btn.disabled=false; return;
+  }
+  whoisResults.innerHTML=renderRDAP(data,d);
+  btn.disabled=false;
+}
+
+function ev(events,action){
+  const e=(events||[]).find(x=>x.eventAction===action);
+  return e?fmtDate(e.eventDate):'';
+}
+function fmtDate(s){ try{ return new Date(s).toISOString().slice(0,10); }catch(e){ return s; } }
+function ageStr(s){
+  if(!s)return'';
+  const days=Math.floor((Date.now()-new Date(s))/86400000);
+  if(isNaN(days))return'';
+  const y=Math.floor(days/365), m=Math.floor((days%365)/30);
+  return y>0?(y+'y '+m+'mo'):(days+' days');
+}
+function entityName(entities,role){
+  const e=(entities||[]).find(x=>(x.roles||[]).includes(role));
+  if(!e)return'';
+  if(e.vcardArray&&e.vcardArray[1]){
+    const fn=e.vcardArray[1].find(v=>v[0]==='fn');
+    if(fn)return fn[3];
+  }
+  return e.handle||'';
+}
+
+function renderRDAP(d,domain){
+  const reg=ev(d.events,'registration');
+  const exp=ev(d.events,'expiration');
+  const upd=ev(d.events,'last changed')||ev(d.events,'last update of RDAP database');
+  const registrar=entityName(d.entities,'registrar');
+  const registrant=entityName(d.entities,'registrant');
+  const ns=(d.nameservers||[]).map(n=>esc((n.ldhName||'').toLowerCase()));
+  const status=(d.status||[]).map(s=>esc(s)).join(', ');
+  const dnssec=d.secureDNS?(d.secureDNS.delegationSigned?'Signed (DNSSEC on)':'Unsigned'):'';
+  const age=ageStr(ev(d.events,'registration'));
+  let recent='';
+  if(reg){ const days=Math.floor((Date.now()-new Date(reg))/86400000);
+    if(days<30) recent='<div class="verdict v-bad">🚩 Registered only '+days+' days ago — common in phishing/scam domains.</div>';
+    else if(days<90) recent='<div class="verdict v-warn">🟡 Fairly new domain ('+age+' old).</div>'; }
+  let expWarn='';
+  if(exp){ const ed=Math.floor((new Date(exp)-Date.now())/86400000);
+    if(ed<0) expWarn='<div class="verdict v-bad">⚠️ Domain appears expired ('+fmtDate(exp)+').</div>';
+    else if(ed<30) expWarn='<div class="verdict v-warn">🟡 Expires in '+ed+' days — renew soon.</div>'; }
+
+  let rows='';
+  rows+=row('Domain',esc((d.ldhName||domain).toLowerCase()));
+  if(registrar)rows+=row('Registrar',esc(registrar));
+  if(reg)rows+=row('Registered',esc(reg)+(age?' · '+age+' old':''));
+  if(exp)rows+=row('Expires',esc(exp));
+  if(upd)rows+=row('Updated',esc(upd));
+  if(registrant)rows+=row('Registrant',esc(registrant));
+  if(dnssec)rows+=row('DNSSEC',esc(dnssec));
+  if(status)rows+=row('Status',status);
+
+  let h='<div class="rec-group"><div class="rec-head"><span class="rec-badge who">RDAP</span>'+
+        '<span class="n">registration data</span></div>';
+  h+=recent+expWarn;
+  h+='<div class="who-kv">'+rows+'</div>';
+  if(ns.length){
+    h+='<div class="rec-head" style="margin-top:14px"><span class="rec-badge who">NS</span><span class="n">'+ns.length+' nameservers</span></div>';
+    ns.forEach(n=>h+='<div class="rec">'+n+'</div>');
+  }
+  h+='</div>';
+  return h;
+}
+function row(k,v){ return '<div class="k">'+k+'</div><div class="v">'+v+'</div>'; }
+
+function renderWhoDat(w,domain){
+  const d=(w&&w.domain)?w.domain:w||{};
+  const reg=d.created_date_in_time||d.created_date||'';
+  let rows='';
+  rows+=row('Domain',esc((d.domain||domain)));
+  if(w.registrar&&w.registrar.name)rows+=row('Registrar',esc(w.registrar.name));
+  if(reg)rows+=row('Registered',esc(fmtDate(reg))+(ageStr(reg)?' · '+ageStr(reg)+' old':''));
+  if(d.expiration_date_in_time||d.expiration_date)rows+=row('Expires',esc(fmtDate(d.expiration_date_in_time||d.expiration_date)));
+  if(d.updated_date_in_time||d.updated_date)rows+=row('Updated',esc(fmtDate(d.updated_date_in_time||d.updated_date)));
+  if(d.status&&d.status.length)rows+=row('Status',d.status.map(esc).join(', '));
+  let h='<div class="rec-group"><div class="rec-head"><span class="rec-badge who">WHOIS</span><span class="n">registration data</span></div>';
+  h+='<div class="who-kv">'+rows+'</div>';
+  if(d.name_servers&&d.name_servers.length){
+    h+='<div class="rec-head" style="margin-top:14px"><span class="rec-badge who">NS</span><span class="n">'+d.name_servers.length+' nameservers</span></div>';
+    d.name_servers.forEach(n=>h+='<div class="rec">'+esc(n.toLowerCase())+'</div>');
+  }
+  return h+'</div>';
+}
+
+/* ====================================================================
+   MAIL HEALTH  — combined MX/SPF/DMARC/DKIM verdict
+   ==================================================================== */
+const mailResults=document.getElementById('mailResults');
+document.getElementById('mailGo').onclick=runMail;
+document.getElementById('mailInput').addEventListener('keydown',e=>{if(e.key==='Enter')runMail();});
+
+async function runMail(){
+  let d=normDomain(document.getElementById('mailInput').value);
+  if(!d){ mailResults.innerHTML='<div class="empty">Type a domain first, ya turkey.</div>'; return; }
+  mailResults.innerHTML='<div class="loading"><span class="spinner"></span> Inspecting mail setup for <b>'+esc(d)+'</b>…</div>';
+  const btn=document.getElementById('mailGo'); btn.disabled=true;
+
+  const mx=rdata(await query(d,'MX'),'MX').map(clean).sort((a,b)=>parseInt(a)-parseInt(b));
+  const txt=rdata(await query(d,'TXT'),'TXT').map(clean);
+  const spf=txt.filter(x=>/^v=spf1/i.test(x));
+  const dm=rdata(await query('_dmarc.'+d,'TXT'),'TXT').map(clean).filter(x=>/^v=DMARC1/i.test(x));
+  let dkim=[];
+  for(const sel of ['default','google','selector1','selector2','k1','s1','dkim','mail','smtp']){
+    const recs=rdata(await query(sel+'._domainkey.'+d,'TXT'),'TXT').map(clean).filter(x=>/(v=DKIM1|p=)/i.test(x));
+    if(recs.length) dkim.push(sel);
+  }
+
+  // scoring
+  let score=0, max=4, items=[];
+  // MX
+  if(mx.length){ score++; items.push(['ok','MX','Mail servers found ('+mx.length+')']); }
+  else items.push(['bad','MX','No MX records — this domain can\'t receive mail']);
+  // SPF
+  const sv=spfVerdict(spf);
+  if(sv.lvl==='ok'){ score++; items.push(['ok','SPF',stripEmoji(sv.msg)]); }
+  else if(sv.lvl==='warn'){ score+=0.5; items.push(['warn','SPF',stripEmoji(sv.msg)]); }
+  else items.push(['bad','SPF',stripEmoji(sv.msg)]);
+  // DMARC
+  const dv=dmarcVerdict(dm);
+  if(dv.lvl==='ok'){ score++; items.push(['ok','DMARC',stripEmoji(dv.msg)]); }
+  else if(dv.lvl==='warn'){ score+=0.5; items.push(['warn','DMARC',stripEmoji(dv.msg)]); }
+  else items.push(['bad','DMARC',stripEmoji(dv.msg)]);
+  // DKIM
+  if(dkim.length){ score++; items.push(['ok','DKIM','Found on selector(s): '+dkim.join(', ')]); }
+  else items.push(['warn','DKIM','No DKIM on common selectors (may use a custom one)']);
+
+  const pct=Math.round(score/max*100);
+  let grade,gradeColor;
+  if(pct>=90){grade='Excellent';gradeColor='var(--green)';}
+  else if(pct>=65){grade='Good — minor gaps';gradeColor='var(--gold)';}
+  else if(pct>=40){grade='Needs work';gradeColor='var(--gobble2)';}
+  else {grade='Poor — spoofable';gradeColor='var(--wattle)';}
+
+  let h='<div class="card">';
+  h+='<div class="score"><svg class="ring" viewBox="0 0 36 36">'+
+     '<path d="M18 2a16 16 0 1 1 0 32 16 16 0 1 1 0-32" fill="none" stroke="#3a2512" stroke-width="3"/>'+
+     '<path d="M18 2a16 16 0 1 1 0 32 16 16 0 1 1 0-32" fill="none" stroke="'+gradeColor+'" stroke-width="3" '+
+     'stroke-dasharray="'+(pct)+' 100" stroke-linecap="round"/>'+
+     '<text x="18" y="21" text-anchor="middle" font-size="9" font-weight="800" fill="'+gradeColor+'">'+pct+'%</text></svg>'+
+     '<div><div class="grade" style="color:'+gradeColor+'">'+grade+'</div>'+
+     '<div class="sub">Mail security score for '+esc(d)+'</div></div></div>';
+  items.forEach(it=>{
+    h+='<div class="statusrow"><span class="dot '+it[0]+'"></span><span class="name">'+it[1]+
+       '</span><span class="val '+(it[0]==='ok'?'clean':it[0]==='bad'?'listed':'')+'">'+esc(it[2])+'</span></div>';
+  });
+  if(mx.length){ h+='<div style="margin-top:10px">'; mx.forEach(m=>h+='<div class="rec">'+esc(m)+'</div>'); h+='</div>'; }
+  h+='</div>';
+  mailResults.innerHTML=h;
+  btn.disabled=false;
+}
+function stripEmoji(s){ return s.replace(/^[^\w]*\s*/,'').replace(/^(SPF|DMARC)\s+/,''); }
+
+/* ====================================================================
+   BLACKLIST / RBL  — DNS-based blocklist checks
+   ==================================================================== */
+const RBLS=[
+  {z:'zen.spamhaus.org',n:'Spamhaus ZEN'},
+  {z:'b.barracudacentral.org',n:'Barracuda'},
+  {z:'bl.spamcop.net',n:'SpamCop'},
+  {z:'dnsbl.sorbs.net',n:'SORBS'},
+  {z:'psbl.surriel.com',n:'PSBL'},
+  {z:'bl.mailspike.net',n:'Mailspike'},
+  {z:'dnsbl-1.uceprotect.net',n:'UCEPROTECT-1'},
+  {z:'spam.dnsbl.anonmails.de',n:'Anonmails'},
+  {z:'all.s5h.net',n:'s5h'},
+  {z:'cbl.abuseat.org',n:'CBL/AbuseAt'}
+];
+const blResults=document.getElementById('blResults');
+document.getElementById('blGo').onclick=runBlacklist;
+document.getElementById('blInput').addEventListener('keydown',e=>{if(e.key==='Enter')runBlacklist();});
+
+function isIP(s){ return /^(\d{1,3}\.){3}\d{1,3}$/.test(s); }
+
+async function runBlacklist(){
+  let v=document.getElementById('blInput').value.trim().toLowerCase()
+        .replace(/^https?:\/\//,'').replace(/\/.*$/,'').replace(/^www\./,'');
+  if(!v){ blResults.innerHTML='<div class="empty">Enter a domain or IP first, ya turkey.</div>'; return; }
+  const btn=document.getElementById('blGo'); btn.disabled=true;
+
+  // resolve domain → IP if needed
+  let ip=v, label=v;
+  if(!isIP(v)){
+    const a=rdata(await query(v,'A'),'A');
+    if(!a.length){ blResults.innerHTML='<div class="card"><div class="verdict v-bad">No A record for '+esc(v)+' — can\'t check blacklists.</div></div>'; btn.disabled=false; return; }
+    ip=a[0]; label=v+' → '+ip;
+  }
+  const rev=ip.split('.').reverse().join('.');
+
+  // render skeleton with waiting dots
+  let h='<div class="card"><label>Checking '+esc(label)+' against '+RBLS.length+' blocklists</label><div id="blRows">';
+  RBLS.forEach((r,i)=>h+='<div class="statusrow" id="bl'+i+'"><span class="dot wait"></span><span class="name">'+esc(r.n)+'</span><span class="val">checking…</span></div>');
+  h+='</div><div id="blSummary" style="margin-top:10px"></div></div>';
+  blResults.innerHTML=h;
+
+  let listed=0, done=0;
+  RBLS.forEach(async (r,i)=>{
+    const q=rev+'.'+r.z;
+    let onList=false, note='';
+    try{
+      const ans=await query(q,'A');
+      const a=rdata(ans,'A');
+      if(a.length){ onList=true; note=a.join(', '); }
+    }catch(e){ note='error'; }
+    const rowEl=document.getElementById('bl'+i);
+    if(rowEl){
+      const dot=rowEl.querySelector('.dot'), val=rowEl.querySelector('.val');
+      if(onList){ dot.className='dot bad'; val.className='val listed'; val.textContent='LISTED ('+note+')'; listed++; }
+      else { dot.className='dot ok'; val.className='val clean'; val.textContent='clean'; }
+    }
+    done++;
+    if(done===RBLS.length){
+      const sum=document.getElementById('blSummary');
+      if(sum) sum.innerHTML = listed
+        ? '<div class="verdict v-bad">⚠️ Listed on '+listed+' of '+RBLS.length+' blocklists. This can hurt mail delivery — request delisting from the offending providers.</div>'
+        : '<div class="verdict v-ok">✅ Clean on all '+RBLS.length+' blocklists checked.</div>';
+      btn.disabled=false;
+    }
+  });
+}
+
+/* ====================================================================
+   DNS PROPAGATION  — compare resolvers
+   ==================================================================== */
+const RESOLVERS=[
+  {n:'Google',u:'https://dns.google/resolve?'},
+  {n:'Cloudflare',u:'https://cloudflare-dns.com/dns-query?'},
+  {n:'AdGuard',u:'https://dns.adguard-dns.com/resolve?'}
+];
+document.querySelectorAll('#propChips .chip').forEach(c=>c.onclick=()=>{
+  document.querySelectorAll('#propChips .chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on');
+});
+const propResults=document.getElementById('propResults');
+document.getElementById('propGo').onclick=runProp;
+document.getElementById('propInput').addEventListener('keydown',e=>{if(e.key==='Enter')runProp();});
+
+async function queryAt(resolver,name,type){
+  try{
+    const r=await fetch(resolver.u+'name='+encodeURIComponent(name)+'&type='+type,{headers:{accept:'application/dns-json'}});
+    if(r.ok) return await r.json();
+  }catch(e){}
+  return null;
+}
+async function runProp(){
+  let d=normDomain(document.getElementById('propInput').value);
+  if(!d){ propResults.innerHTML='<div class="empty">Type a domain first, ya turkey.</div>'; return; }
+  const t=(document.querySelector('#propChips .chip.on')||{dataset:{t:'A'}}).dataset.t;
+  const btn=document.getElementById('propGo'); btn.disabled=true;
+  propResults.innerHTML='<div class="card"><label>'+esc(d)+' · '+t+' record across resolvers</label><div id="propRows">'+
+    RESOLVERS.map((r,i)=>'<div class="statusrow" id="pr'+i+'"><span class="dot wait"></span><span class="name">'+esc(r.n)+'</span><span class="val">querying…</span></div>').join('')+
+    '</div><div id="propSummary" style="margin-top:10px"></div></div>';
+
+  const results=[];
+  await Promise.all(RESOLVERS.map(async (r,i)=>{
+    const ans=await queryAt(r,d,t);
+    let vals=rdata(ans,t).map(clean).sort();
+    const key=vals.join(' | ')||'(none)';
+    results[i]=key;
+    const rowEl=document.getElementById('pr'+i);
+    if(rowEl){
+      const dot=rowEl.querySelector('.dot'), val=rowEl.querySelector('.val');
+      dot.className='dot '+(vals.length?'ok':'warn');
+      val.textContent=vals.length?vals.join(', '):'no record';
+    }
+  }));
+  const uniq=[...new Set(results.filter(Boolean))];
+  const sum=document.getElementById('propSummary');
+  if(sum) sum.innerHTML = uniq.length<=1
+    ? '<div class="verdict v-ok">✅ All resolvers agree — record is fully propagated.</div>'
+    : '<div class="verdict v-warn">🟡 Resolvers disagree ('+uniq.length+' different answers). Still propagating, or a recent change hasn\'t reached everyone yet.</div>';
+  btn.disabled=false;
+}
+
+/* ====================================================================
+   SUBNET / CIDR CALCULATOR  (offline)
+   ==================================================================== */
+const subResults=document.getElementById('subResults');
+document.getElementById('subGo').onclick=runSubnet;
+document.getElementById('subInput').addEventListener('keydown',e=>{if(e.key==='Enter')runSubnet();});
+
+function ipToInt(ip){ return ip.split('.').reduce((a,o)=>((a<<8)+(+o))>>>0,0); }
+function intToIp(n){ return [24,16,8,0].map(s=>(n>>>s)&255).join('.'); }
+
+function runSubnet(){
+  let v=document.getElementById('subInput').value.trim();
+  let m=v.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?:\/(\d{1,2}))?$/);
+  if(!m){ subResults.innerHTML='<div class="card"><div class="verdict v-bad">Use the form 192.168.1.0/24</div></div>'; return; }
+  const octets=m[1].split('.').map(Number);
+  if(octets.some(o=>o>255)){ subResults.innerHTML='<div class="card"><div class="verdict v-bad">Octets must be 0–255.</div></div>'; return; }
+  let prefix=m[2]!==undefined?+m[2]:24;
+  if(prefix>32){ subResults.innerHTML='<div class="card"><div class="verdict v-bad">Prefix must be 0–32.</div></div>'; return; }
+
+  const ipInt=ipToInt(m[1]);
+  const mask=prefix===0?0:(0xFFFFFFFF<<(32-prefix))>>>0;
+  const network=(ipInt&mask)>>>0;
+  const broadcast=(network|(~mask>>>0))>>>0;
+  const total=Math.pow(2,32-prefix);
+  let firstHost,lastHost,usable;
+  if(prefix>=31){ firstHost=network; lastHost=broadcast; usable=prefix===32?1:2; }
+  else { firstHost=(network+1)>>>0; lastHost=(broadcast-1)>>>0; usable=total-2; }
+  const wildcard=(~mask)>>>0;
+  const cls=octets[0]<128?'A':octets[0]<192?'B':octets[0]<224?'C':octets[0]<240?'D (multicast)':'E (reserved)';
+  const priv=(octets[0]===10)||(octets[0]===172&&octets[1]>=16&&octets[1]<=31)||(octets[0]===192&&octets[1]===168)||(octets[0]===169&&octets[1]===254);
+
+  let h='<div class="card"><div class="subgrid">'+
+    row2('CIDR',intToIp(network)+'/'+prefix)+
+    row2('Netmask',intToIp(mask))+
+    row2('Wildcard',intToIp(wildcard))+
+    row2('Network',intToIp(network))+
+    row2('Broadcast',intToIp(broadcast))+
+    row2('First host',intToIp(firstHost))+
+    row2('Last host',intToIp(lastHost))+
+    row2('Usable hosts',usable.toLocaleString())+
+    row2('Total addresses',total.toLocaleString())+
+    row2('Class',cls)+
+    row2('Type',priv?'Private (RFC1918)':'Public')+
+    '</div></div>';
+  subResults.innerHTML=h;
+}
+function row2(k,v){ return '<div class="k">'+esc(k)+'</div><div class="v">'+esc(v)+'</div>'; }
+
+/* shared domain normalizer */
+function normDomain(s){
+  return String(s||'').trim().toLowerCase()
+    .replace(/^https?:\/\//,'').replace(/\/.*$/,'').replace(/^www\./,'');
+}
+
+/* ====================================================================
+   EMAIL HEADER PARSER  (offline)
+   ==================================================================== */
+const hdrResults=document.getElementById('hdrResults');
+document.getElementById('hdrGo').onclick=parseHeaders;
+document.getElementById('hdrClear').onclick=()=>{
+  document.getElementById('hdrInput').value=''; hdrResults.innerHTML='';
+};
+
+// unfold RFC822 headers: continuation lines start with whitespace
+function unfoldHeaders(raw){
+  const lines=raw.replace(/\r\n/g,'\n').split('\n');
+  const out=[];
+  for(const line of lines){
+    if(/^[ \t]/.test(line) && out.length){ out[out.length-1]+=' '+line.trim(); }
+    else out.push(line);
+  }
+  return out;
+}
+function getHeader(headers,name){
+  const h=headers.find(l=>l.toLowerCase().startsWith(name.toLowerCase()+':'));
+  return h?h.slice(h.indexOf(':')+1).trim():'';
+}
+function getAllHeaders(headers,name){
+  return headers.filter(l=>l.toLowerCase().startsWith(name.toLowerCase()+':'))
+                .map(l=>l.slice(l.indexOf(':')+1).trim());
+}
+
+function parseHeaders(){
+  const raw=document.getElementById('hdrInput').value;
+  if(!raw.trim()){ hdrResults.innerHTML='<div class="empty">Paste some headers first, ya turkey.</div>'; return; }
+  // cut body: headers end at first blank line
+  const headerBlock=raw.split(/\n\s*\n/)[0];
+  const headers=unfoldHeaders(headerBlock);
+
+  const from=getHeader(headers,'From');
+  const to=getHeader(headers,'To');
+  const subject=getHeader(headers,'Subject');
+  const date=getHeader(headers,'Date');
+  const msgId=getHeader(headers,'Message-ID')||getHeader(headers,'Message-Id');
+  const returnPath=getHeader(headers,'Return-Path');
+  const replyTo=getHeader(headers,'Reply-To');
+
+  // ---- Received hops (last one in file = first hop chronologically) ----
+  const received=getAllHeaders(headers,'Received').reverse(); // chronological order
+  const hops=received.map(parseReceived);
+
+  // ---- Auth results ----
+  const authBlock=getAllHeaders(headers,'Authentication-Results').join(' ; ')+' '+
+                  getAllHeaders(headers,'Received-SPF').join(' ; ');
+  const spf=matchAuth(authBlock,/spf=(\w+)/i)||matchAuth(getAllHeaders(headers,'Received-SPF').join(' '),/^(\w+)/i);
+  const dkim=matchAuth(authBlock,/dkim=(\w+)/i);
+  const dmarc=matchAuth(authBlock,/dmarc=(\w+)/i);
+
+  let h='<div class="card">';
+  // summary
+  h+='<div class="rec-head"><span class="rec-badge">SUMMARY</span></div>';
+  h+='<div class="who-kv">';
+  if(from)h+=hrow('From',from);
+  if(replyTo)h+=hrow('Reply-To',replyTo);
+  if(returnPath)h+=hrow('Return-Path',returnPath);
+  if(to)h+=hrow('To',to);
+  if(subject)h+=hrow('Subject',subject);
+  if(date)h+=hrow('Date',date);
+  if(msgId)h+=hrow('Message-ID',msgId);
+  h+=hrow('Hops',hops.length+' relay'+(hops.length===1?'':'s'));
+  h+='</div>';
+
+  // mismatch warnings
+  let warns=[];
+  const fromDom=extractDomain(from), rpDom=extractDomain(returnPath);
+  if(fromDom && rpDom && fromDom!==rpDom)
+    warns.push('From domain ('+esc(fromDom)+') ≠ Return-Path domain ('+esc(rpDom)+') — common in spoofing or mailing lists.');
+  if(replyTo && extractDomain(replyTo) && extractDomain(replyTo)!==fromDom)
+    warns.push('Reply-To points to a different domain ('+esc(extractDomain(replyTo))+') than From — verify before trusting.');
+  if(warns.length){
+    h+='<div style="margin-top:10px">';
+    warns.forEach(w=>h+='<div class="verdict v-warn">🟡 '+w+'</div>');
+    h+='</div>';
+  }
+
+  // auth chips
+  h+='<div class="rec-head" style="margin-top:14px"><span class="rec-badge">AUTH</span></div>';
+  h+='<div class="authchips">'+authChip('SPF',spf)+authChip('DKIM',dkim)+authChip('DMARC',dmarc)+'</div>';
+  if((spf&&/fail/i.test(spf))||(dkim&&/fail/i.test(dkim))||(dmarc&&/fail/i.test(dmarc)))
+    h+='<div class="verdict v-bad">⚠️ One or more authentication checks failed — treat this message with suspicion.</div>';
+  else if(spf||dkim||dmarc)
+    h+='<div class="verdict v-ok">✅ Authentication results found above.</div>';
+  h+='</div>';
+
+  // ---- delivery path ----
+  if(hops.length){
+    h+='<div class="card"><div class="rec-head"><span class="rec-badge">DELIVERY PATH</span><span class="n">oldest → newest, with delays</span></div>';
+    let prevTime=null;
+    hops.forEach((hop,i)=>{
+      let delay='', dcls='d0';
+      if(hop.time && prevTime){
+        const d=Math.round((hop.time-prevTime)/1000);
+        if(d>=0){ delay=d+'s'; dcls = d<1?'d0':d<5?'d1':d<30?'d2':'d3'; }
+      }
+      prevTime=hop.time||prevTime;
+      h+='<div class="hop"><div class="num">'+(i+1)+'</div><div class="body"><div class="ht">';
+      if(hop.from)h+='<span>from</span> <b>'+esc(hop.from)+'</b> ';
+      if(hop.by)h+='<span>by</span> <b>'+esc(hop.by)+'</b>';
+      if(hop.with)h+=' <span>('+esc(hop.with)+')</span>';
+      if(hop.timeStr)h+='<br><span>'+esc(hop.timeStr)+'</span>';
+      h+='</div></div>'+(delay?'<div class="delay '+dcls+'">+'+delay+'</div>':'')+'</div>';
+    });
+    h+='</div>';
+
+    // originating IP
+    const origIP=hops.map(x=>x.ip).find(Boolean);
+    if(origIP){
+      h+='<div class="card"><div class="rec-head"><span class="rec-badge who">ORIGIN</span></div>'+
+         '<div class="who-kv">'+hrow('Originating IP',origIP)+'</div>'+
+         '<button class="go" id="hdrTrace" style="margin-top:10px;width:100%">📍 Geolocate / blacklist-check this IP</button></div>';
+    }
+  }
+
+  hdrResults.innerHTML=h;
+
+  // wire the trace button to the IP tab + blacklist
+  const tb=document.getElementById('hdrTrace');
+  if(tb) tb.onclick=()=>{
+    const origIP=hops.map(x=>x.ip).find(Boolean);
+    document.getElementById('ipInput').value=origIP;
+    showPanel('ip'); runIP(origIP);
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+}
+
+function hrow(k,v){ return '<div class="k">'+esc(k)+'</div><div class="v">'+esc(v)+'</div>'; }
+function matchAuth(text,re){ const m=text.match(re); return m?m[1]:''; }
+function authChip(name,val){
+  if(!val) return '<span class="authchip none">'+name+': n/a</span>';
+  const cls=/pass/i.test(val)?'pass':/fail|softfail|none|neutral|temperror|permerror/i.test(val)?'fail':'none';
+  return '<span class="authchip '+cls+'">'+name+': '+esc(val)+'</span>';
+}
+function extractDomain(s){
+  if(!s)return'';
+  const m=s.match(/@([A-Za-z0-9.\-]+)/);
+  return m?m[1].toLowerCase().replace(/[>)\s].*$/,''):'';
+}
+function parseReceived(r){
+  const hop={raw:r,from:'',by:'',with:'',ip:'',time:null,timeStr:''};
+  let m=r.match(/from\s+([^\s;()]+)/i); if(m)hop.from=m[1];
+  m=r.match(/\bby\s+([^\s;()]+)/i); if(m)hop.by=m[1];
+  m=r.match(/\bwith\s+([A-Za-z0-9/.\-]+)/i); if(m)hop.with=m[1];
+  // IP (prefer the one in brackets/parens near "from")
+  m=r.match(/[\[(](\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})[\])]/);
+  if(!m) m=r.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+  if(m && !/^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(m[1])) hop.ip=m[1];
+  else if(m) hop.ip=m[1]; // keep even private, origin filter handles preference
+  // timestamp: after the last ';'
+  const semi=r.lastIndexOf(';');
+  if(semi>-1){
+    const ts=r.slice(semi+1).trim();
+    const d=new Date(ts);
+    if(!isNaN(d)){ hop.time=d.getTime(); hop.timeStr=d.toLocaleString(); }
+    else hop.timeStr=ts;
+  }
+  return hop;
+}
+
+/* ====================================================================
+   SPEED TEST  — Cloudflare edge (CORS-enabled __down / __up)
+   ==================================================================== */
+const speedGo=document.getElementById('speedGo');
+let speedRunning=false;
+const GAUGE_LEN=251; // arc length of the semicircle path
+
+function setGauge(mbps){
+  // log-ish scale: 0..1000 Mbps mapped onto the arc, capped
+  const frac=Math.min(1, Math.log10(Math.max(1,mbps)+1)/Math.log10(1001));
+  document.getElementById('gaugeFill').setAttribute('stroke-dashoffset', GAUGE_LEN*(1-frac));
+}
+function showSpeed(v,unit){
+  document.getElementById('speedBig').textContent=v;
+  document.getElementById('speedUnit').textContent=unit;
+}
+
+speedGo.onclick=runSpeed;
+async function runSpeed(){
+  if(speedRunning)return;
+  speedRunning=true;
+  speedGo.disabled=true; speedGo.textContent='Testing…';
+  document.getElementById('speedMetrics').style.display='grid';
+  document.getElementById('speedNote').innerHTML='';
+  const phase=document.getElementById('speedPhase');
+  ['mDL','mUL','mPing','mJit'].forEach(id=>document.getElementById(id).textContent='–');
+  setGauge(0); showSpeed('0','Mbps');
+
+  let ping=null, jit=null, dlMbps=null, ulMbps=null, anyOk=false;
+
+  // ---- LATENCY + JITTER ----
+  try{
+    phase.textContent='Measuring latency…';
+    const pings=[];
+    for(let i=0;i<6;i++){
+      const t0=performance.now();
+      const r=await fetch('https://speed.cloudflare.com/__down?bytes=1000&measId='+Math.random(),{cache:'no-store'});
+      await r.arrayBuffer();
+      pings.push(performance.now()-t0);
+    }
+    pings.sort((a,b)=>a-b);
+    ping=pings[Math.floor(pings.length/2)];
+    jit=0; for(let i=1;i<pings.length;i++) jit+=Math.abs(pings[i]-pings[i-1]);
+    jit=jit/(pings.length-1);
+    document.getElementById('mPing').textContent=ping.toFixed(0);
+    document.getElementById('mJit').textContent=jit.toFixed(0);
+    anyOk=true;
+  }catch(e){
+    document.getElementById('mPing').textContent='—';
+    document.getElementById('mJit').textContent='—';
+  }
+
+  // ---- DOWNLOAD ----
+  try{
+    phase.textContent='Testing download…';
+    dlMbps=await measureDownload(p=>{
+      showSpeed(p.toFixed(p<100?1:0),'Mbps'); setGauge(p);
+      document.getElementById('mDL').textContent=p.toFixed(p<100?1:0); // live-fill the metric
+    });
+    document.getElementById('mDL').textContent=dlMbps.toFixed(dlMbps<100?1:0);
+    setGauge(dlMbps); showSpeed(dlMbps.toFixed(dlMbps<100?1:0),'Mbps');
+    anyOk=true;
+  }catch(e){
+    document.getElementById('mDL').textContent='—';
+  }
+
+  // ---- UPLOAD (best-effort; failure here must not break the rest) ----
+  try{
+    phase.textContent='Testing upload…';
+    ulMbps=await measureUpload(p=>{});
+    document.getElementById('mUL').textContent=ulMbps>0?ulMbps.toFixed(ulMbps<100?1:0):'n/a';
+  }catch(e){
+    document.getElementById('mUL').textContent='n/a';
+  }
+
+  // settle the dial on the download figure if we have it
+  if(dlMbps!=null){ setGauge(dlMbps); showSpeed(dlMbps.toFixed(dlMbps<100?1:0),'Mbps'); }
+
+  if(anyOk){
+    phase.textContent='Done — download shown on the dial.';
+    speedNote(dlMbps,ulMbps,ping,jit);
+  }else{
+    phase.textContent='Couldn\'t reach the test server. Check your connection and try again.';
+  }
+  speedGo.disabled=false; speedGo.textContent='⚡ Test Again';
+  speedRunning=false;
+}
+
+async function measureDownload(onProgress){
+  const sizes=[1e6, 1e7, 2.5e7, 5e7];
+  const DEADLINE=performance.now()+15000; // hard 15s budget for the whole download phase
+  let best=0, gotAny=false;
+  for(const bytes of sizes){
+    if(performance.now()>DEADLINE) break;
+    const ctrl=new AbortController();
+    const killer=setTimeout(()=>ctrl.abort(), 8000); // no single file may run > 8s
+    const t0=performance.now();
+    try{
+      const r=await fetch('https://speed.cloudflare.com/__down?bytes='+bytes+'&measId='+Math.random(),
+                          {cache:'no-store',signal:ctrl.signal});
+      if(!r.ok) throw new Error('http '+r.status);
+      if(r.body && r.body.getReader){
+        const reader=r.body.getReader();
+        let received=0;
+        while(true){
+          const {done,value}=await reader.read();
+          if(done)break;
+          received+=value.length; gotAny=true;
+          const secs=(performance.now()-t0)/1000;
+          if(secs>0.2){ const m=(received*8)/secs/1e6; if(m>best)best=m; onProgress(best); }
+        }
+        const secs=(performance.now()-t0)/1000;
+        const m=(received*8)/secs/1e6; if(m>best)best=m; onProgress(best);
+        if(secs>2) { clearTimeout(killer); break; }
+      }else{
+        const buf=await r.arrayBuffer();
+        const secs=(performance.now()-t0)/1000;
+        const m=(buf.byteLength*8)/secs/1e6; if(m>best)best=m; gotAny=true; onProgress(best);
+        if(secs>2) { clearTimeout(killer); break; }
+      }
+    }catch(e){
+      // aborted (file too slow) — if we already have data, that's fine; stop escalating
+      if(gotAny){ clearTimeout(killer); break; }
+      clearTimeout(killer);
+      throw e; // genuine failure on the very first file
+    }
+    clearTimeout(killer);
+  }
+  if(!gotAny) throw new Error('no data');
+  return best;
+}
+
+async function measureUpload(onProgress){
+  const sizes=[5e5, 2e6, 5e6];
+  let best=0;
+  for(const bytes of sizes){
+    const payload=new Uint8Array(bytes);
+    const t0=performance.now();
+    const r=await fetch('https://speed.cloudflare.com/__up?measId='+Math.random(),{
+      method:'POST',body:payload,cache:'no-store'
+    });
+    // even an opaque/erroring response still took transfer time, but only count real ones
+    if(!r.ok) throw new Error('http '+r.status);
+    const secs=(performance.now()-t0)/1000;
+    const m=(bytes*8)/secs/1e6; if(m>best)best=m;
+    if(secs>2) break;
+  }
+  return best;
+}
+
+function speedNote(dl,ul,ping,jit){
+  if(dl==null){
+    document.getElementById('speedNote').innerHTML=
+      '<div class="card"><div class="verdict v-warn">🟡 Got latency but the download test didn\'t complete. Try again — Cloudflare\'s edge can briefly rate-limit repeat runs.</div></div>';
+    return;
+  }
+  let grade,lvl;
+  if(dl>=100){grade='Very fast — 4K streaming, big downloads, multiple users all fine.';lvl='ok';}
+  else if(dl>=50){grade='Fast — solid for 4K, video calls, and most households.';lvl='ok';}
+  else if(dl>=25){grade='Good — HD streaming and video calls are comfortable.';lvl='ok';}
+  else if(dl>=10){grade='Average — fine for browsing and HD, may strain with multiple users.';lvl='warn';}
+  else {grade='Slow — basic browsing only; streaming may buffer.';lvl='bad';}
+  let extra='';
+  if(jit!=null && jit>30) extra=' Jitter is high ('+jit.toFixed(0)+'ms) — can cause choppy calls and game lag.';
+  if(ul!=null && ul>0) extra+=' Upload ~'+ul.toFixed(ul<100?1:0)+' Mbps.';
+  document.getElementById('speedNote').innerHTML=
+    '<div class="card"><div class="verdict v-'+lvl+'">'+grade+extra+'</div>'+
+    '<div class="empty">Measured against Cloudflare\'s edge from your browser. Wi-Fi, other devices, and background apps affect results — run it a few times. For true ISP line speed, test on Ethernet with nothing else running.</div></div>';
+}
+</script>
+</body>
+</html>
