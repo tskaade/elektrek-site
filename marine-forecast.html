@@ -154,6 +154,9 @@
   .sunCard .label{font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--sub); margin-bottom:10px;}
   .sunScene{width:100%; border-radius:12px; overflow:hidden;}
   .sunScene svg{width:100%; height:auto; display:block;}
+  .fcDaysWrap{padding:14px 16px 0;}
+  .fcDaysCard{background:var(--card2); border:1px solid var(--line); border-radius:16px; padding:14px;}
+  .fcDaysCard .label{font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--sub); margin-bottom:4px;}
   .sunTimes{display:flex; justify-content:space-around; margin-top:12px; flex-wrap:wrap; gap:8px;}
   .sunBlk{display:flex; align-items:center; gap:8px;}
   .sunBlk .sunIco{font-size:22px;}
@@ -242,9 +245,9 @@
   .rkCaut{--rk:7deg;  --bob:4px; animation-duration:2.2s;}
   .rkRough{--rk:12deg;--bob:7px; animation-duration:1.3s;}
   .rkStorm{--rk:18deg;--bob:10px;animation-duration:0.85s;}
-  .seaA{animation:seaDrift 4s linear infinite;}
-  .seaB{animation:seaDrift 6s linear infinite reverse;}
-  @keyframes seaDrift{from{transform:translateX(0);}to{transform:translateX(-40px);}}
+  .seaA{animation:seaDrift 3.5s linear infinite; will-change:transform;}
+  .seaB{animation:seaDrift 6s linear infinite; will-change:transform;}
+  @keyframes seaDrift{from{transform:translate3d(0,0,0);}to{transform:translate3d(-40px,0,0);}}
   .sunRays{transform-origin:60px 34px; animation:sunSpin 18s linear infinite;}
   @keyframes sunSpin{to{transform:rotate(360deg);}}
   .cloudDrift{animation:cloudMove 9s ease-in-out infinite;}
@@ -402,12 +405,12 @@
     </div>
     <div id="fcHeadline" class="fcHeadline">Reading the forecast…</div>
     <div class="boatScene" id="boatScene"></div>
+    <div class="sunTimes" id="sunTimes">
+      <div class="sunBlk"><div class="sunIco">🌅</div><div><div class="sunT" id="sunriseT">--:--</div><div class="sunL">Sunrise</div></div></div>
+      <div class="sunBlk"><div class="sunIco">🌇</div><div><div class="sunT" id="sunsetT">--:--</div><div class="sunL">Sunset</div></div></div>
+      <div class="sunBlk"><div class="sunIco">☀️</div><div><div class="sunT" id="daylightT">--</div><div class="sunL">Daylight</div></div></div>
+    </div>
     <div id="fcBest" class="fcBest"></div>
-    <div id="fcDays" class="fcDaily"></div>
-    <a class="ecccBtn" id="ecccBtn" href="#" target="_blank" rel="noopener">
-      🍁 <span id="ecccLabel">Official ECCC marine forecast</span> ↗
-    </a>
-    <div class="fcMsg" id="fcFootnote" style="margin-top:8px;">Verdict is wind &amp; gust based, for crossing open water. Always check the official ECCC bulletin before heading out.</div>
   </div>
 </div>
 
@@ -418,17 +421,14 @@
   </div>
 </div>
 
-<div class="sunWrap">
-  <div class="sunCard">
-    <div class="label">Sunrise &amp; Sunset</div>
-    <div class="sunScene" id="sunScene">
-      <svg id="sunSky" viewBox="0 0 320 120" preserveAspectRatio="xMidYMid meet"></svg>
-    </div>
-    <div class="sunTimes" id="sunTimes">
-      <div class="sunBlk"><div class="sunIco">🌅</div><div><div class="sunT" id="sunriseT">--:--</div><div class="sunL">Sunrise</div></div></div>
-      <div class="sunBlk"><div class="sunIco">🌇</div><div><div class="sunT" id="sunsetT">--:--</div><div class="sunL">Sunset</div></div></div>
-      <div class="sunBlk"><div class="sunIco">☀️</div><div><div class="sunT" id="daylightT">--</div><div class="sunL">Daylight</div></div></div>
-    </div>
+<div class="fcDaysWrap">
+  <div class="fcDaysCard">
+    <div class="label">7-Day Boating Forecast</div>
+    <div id="fcDays" class="fcDaily"></div>
+    <a class="ecccBtn" id="ecccBtn" href="#" target="_blank" rel="noopener">
+      🍁 <span id="ecccLabel">Official ECCC marine forecast</span> ↗
+    </a>
+    <div class="fcMsg" id="fcFootnote" style="margin-top:8px;">Verdict is wind &amp; gust based, for crossing open water. Always check the official ECCC bulletin before heading out.</div>
   </div>
 </div>
 
@@ -484,7 +484,7 @@
 <footer>
   Data from NOAA NDBC, buoys owned &amp; maintained by Environment and Climate Change Canada.<br>
   Auto-refreshes every 10 min. Tap a station above to switch.<br>
-  <span style="opacity:0.6">build v10 · 2026-06-20</span>
+  <span style="opacity:0.6">build v12 · 2026-06-20</span>
 </footer>
 
 <script>
@@ -951,6 +951,7 @@
   // ---------- Canadian GEM boating outlook (Open-Meteo, no key, CORS-friendly) ----------
   let fcData = null;
   let sunData = null;
+  let lastVerdictTier = null;
 
   function degToCompassShort(deg){
     const d = dirText(deg);
@@ -1219,60 +1220,139 @@
     try { localStorage.setItem('buoy_craft', key); } catch(e){}
   }
 
-  // Build the kid-friendly boat-o-meter SVG for a given verdict tier (0..4).
+  // Build the combined hero scene: boat rocking to the boating verdict (tier),
+  // sun/moon reacting to the CURRENT weather + time of day. One shared canvas.
   function renderBoatScene(tier){
     const scene = $('boatScene');
     if (!scene) return;
     const rockClass = ['rkCalm','rkGood','rkCaut','rkRough','rkStorm'][tier];
     const hull = ['#3ddc97','#7fd4ff','#ffd166','#ff9f43','#ff4d6d'][tier];
 
-    // Sky element: sun (calm), cloud (caution/rough), storm cloud (stay off)
-    let sky = '';
-    if (tier <= 1){
-      sky = `<g>
-        <g class="sunRays">
-          ${Array.from({length:8}).map((_,k)=>{
-            const a = (k*45)*Math.PI/180, x1=60+Math.cos(a)*15, y1=34+Math.sin(a)*15, x2=60+Math.cos(a)*23, y2=34+Math.sin(a)*23;
-            return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#ffd24a" stroke-width="2.5" stroke-linecap="round"/>`;
-          }).join('')}
-        </g>
-        <circle cx="60" cy="34" r="12" fill="#ffd24a"/>
-      </g>`;
-    } else if (tier <= 3){
-      sky = `<g class="cloudDrift">
-        <ellipse cx="62" cy="30" rx="22" ry="12" fill="#9fb3c4"/>
-        <ellipse cx="46" cy="34" rx="13" ry="9" fill="#b6c7d6"/>
-        <ellipse cx="78" cy="34" rx="14" ry="9" fill="#8aa0b3"/>
-      </g>`;
-    } else {
-      sky = `<g>
-        <g class="cloudDrift">
-          <ellipse cx="62" cy="28" rx="24" ry="13" fill="#5c6b7a"/>
-          <ellipse cx="44" cy="33" rx="14" ry="10" fill="#6e7d8c"/>
-          <ellipse cx="82" cy="33" rx="15" ry="10" fill="#4a5763"/>
-        </g>
-        <polygon class="bolt" points="60,38 54,54 60,52 56,68 72,48 64,50 70,38" fill="#ffe14a" stroke="#ffb800" stroke-width="1"/>
-        <g class="rain">
-          ${[30,90,170,230,260].map(x=>`<line x1="${x}" y1="44" x2="${x-4}" y2="52" stroke="#9fd0ff" stroke-width="2" stroke-linecap="round"/>`).join('')}
-        </g>
-      </g>`;
-    }
+    // Sky comes from real weather + sun position, not the boating tier, so a
+    // calm-but-overcast day shows a grumpy clouded sun above a steady boat.
+    const sky = buildSkyCharacter();
 
-    // Waves: two drifting layers (wider than viewport so the loop is seamless)
-    const wave = (y, fill, cls) => {
-      let d = `M-40 ${y} `;
-      for (let x=-40; x<=380; x+=20){ d += `Q ${x+10} ${y-7} ${x+20} ${y} `; }
-      return `<path class="${cls}" d="${d} L380 120 L-40 120 Z" fill="${fill}"/>`;
+    // Wave amplitude scales with conditions: glassy when calm, choppy when
+    // rough. Both layers share this so the boat sits in matching water.
+    const amp = [3, 5, 7, 10, 13][tier];          // crest height by tier
+    const wl = 40;                                 // wavelength (px)
+    // Build one wave layer. Layers drift the SAME direction (parallax: back
+    // slower than front) so together they read as a single moving surface.
+    const wave = (y, fill, cls, a) => {
+      let d = `M-${wl} ${y} `;
+      for (let x = -wl; x <= 300 + wl*2; x += wl){
+        d += `q ${wl/4} -${a} ${wl/2} 0 q ${wl/4} ${a} ${wl/2} 0 `;
+      }
+      return `<path class="${cls}" d="${d} L${300+wl*2} 120 L-${wl} 120 Z" fill="${fill}"/>`;
     };
 
     scene.innerHTML = `<svg viewBox="0 0 300 120" preserveAspectRatio="xMidYMid slice">
-      ${sky}
+      ${sky.defs}
+      <rect x="0" y="0" width="300" height="120" fill="${sky.bg}"/>
+      ${sky.stars}
+      ${sky.character}
       <g class="boatGroup ${rockClass}">
         ${CRAFTS[getCraft()].draw(150, 78, 1.05, hull)}
       </g>
-      ${wave(86, 'rgba(40,110,160,0.55)', 'seaB')}
-      ${wave(94, 'rgba(20,80,130,0.85)', 'seaA')}
+      ${wave(88, 'rgba(40,110,160,0.55)', 'seaB', amp*0.8)}
+      ${wave(94, 'rgba(20,80,130,0.85)', 'seaA', amp)}
     </svg>`;
+  }
+
+  // Builds the sky layer (gradient bg, optional stars, and the sun/moon
+  // character) for the combined hero scene, sized to its 300×120 canvas.
+  // Also fills the sunrise/sunset/daylight text readouts. Returns SVG parts.
+  function buildSkyCharacter(){
+    // sensible defaults if sun data hasn't arrived yet: assume clear daytime
+    let isDay = true, wxCat = 'clear', prog = 0.5;
+
+    if (sunData && sunData.daily && sunData.daily.sunrise){
+      const D = sunData.daily;
+      const sunrise = new Date(D.sunrise[0]);
+      const sunset = new Date(D.sunset[0]);
+      const now = new Date();
+      isDay = now >= sunrise && now < sunset;
+      wxCat = wxCategory(D.weather_code ? D.weather_code[0] : 0);
+      prog = Math.max(0, Math.min(1, (now - sunrise) / (sunset - sunrise)));
+
+      $('sunriseT').textContent = sunrise.toLocaleTimeString([], {timeZone:'America/Toronto', hour:'2-digit', minute:'2-digit'});
+      $('sunsetT').textContent = sunset.toLocaleTimeString([], {timeZone:'America/Toronto', hour:'2-digit', minute:'2-digit'});
+      if (D.daylight_duration && D.daylight_duration[0] != null){
+        const secs = D.daylight_duration[0];
+        $('daylightT').textContent = `${Math.floor(secs/3600)}h ${Math.round((secs%3600)/60)}m`;
+      }
+    }
+    const clear = wxCat === 'clear';
+
+    const W = 300;
+    const defs = isDay
+      ? (clear
+          ? `<defs><linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2a7fb8"/><stop offset="100%" stop-color="#7ec8e3"/></linearGradient></defs>`
+          : `<defs><linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3a5a72"/><stop offset="100%" stop-color="#6a8aa0"/></linearGradient></defs>`)
+      : `<defs><linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a1228"/><stop offset="100%" stop-color="#1b2a4a"/></linearGradient></defs>`;
+    const bg = 'url(#skyG)';
+
+    // sun/moon travels a low arc across the top of the scene
+    const t = isDay ? prog : 0.5;
+    const ax0 = 40, ax1 = W-40, peak = 8;
+    const bx = (1-t)*(1-t)*ax0 + 2*(1-t)*t*(W/2) + t*t*ax1;
+    const by = (1-t)*(1-t)*46 + 2*(1-t)*t*peak + t*t*46;
+
+    let character = '';
+    if (isDay){
+      if (clear){
+        character = `<g class="sunChar" transform="translate(${bx.toFixed(1)},${Math.max(20,by).toFixed(1)})">
+          <g>${Array.from({length:12}).map((_,k)=>{const a=k*30*Math.PI/180;const x1=Math.cos(a)*16,y1=Math.sin(a)*16,x2=Math.cos(a)*22,y2=Math.sin(a)*22;return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#ffd24a" stroke-width="2.2" stroke-linecap="round"/>`;}).join('')}</g>
+          <circle r="13" fill="#ffd24a"/>
+          <g class="sunGlasses">
+            <rect x="-10" y="-4" width="8" height="5.5" rx="1.6" fill="#1a1a1a"/>
+            <rect x="2" y="-4" width="8" height="5.5" rx="1.6" fill="#1a1a1a"/>
+            <line x1="-2" y1="-1.5" x2="2" y2="-1.5" stroke="#1a1a1a" stroke-width="1.4"/>
+          </g>
+          <path d="M-5 5 Q0 9 5 5" stroke="#b8860b" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+        </g>`;
+      } else {
+        // grumpy sun with clouds drifting in front (darker + rain as it worsens)
+        const cloudFill = wxCat === 'storm' ? ['#5c6b7a','#6e7d8c','#4a5763']
+                        : wxCat === 'rain'  ? ['#7c8fa0','#8fa3b3','#6e8190']
+                        : ['#dde6ec','#e8eef2','#cfdae2'];
+        const drops = (wxCat === 'rain' || wxCat === 'storm')
+          ? `<g class="rain">${[-12,-3,6,15].map((dx,i)=>`<line x1="${dx}" y1="12" x2="${dx-3}" y2="19" stroke="#9fd0ff" stroke-width="1.5" stroke-linecap="round" style="animation-delay:${(i*0.2).toFixed(1)}s"/>`).join('')}</g>`
+          : '';
+        character = `<g transform="translate(${bx.toFixed(1)},${Math.max(24,by).toFixed(1)})">
+          <g class="sunChar">
+            <circle r="13" fill="#ffd24a"/>
+            <line x1="-7" y1="-5" x2="-2" y2="-3.5" stroke="#b8860b" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="7" y1="-5" x2="2" y2="-3.5" stroke="#b8860b" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="-4" cy="-1" r="1.5" fill="#b8860b"/>
+            <circle cx="4" cy="-1" r="1.5" fill="#b8860b"/>
+            <path d="M-4 6 Q0 3 4 6" stroke="#b8860b" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          </g>
+          <g class="hideCloud">
+            <ellipse cx="11" cy="8" rx="20" ry="11" fill="${cloudFill[0]}"/>
+            <ellipse cx="-6" cy="11" rx="12" ry="8" fill="${cloudFill[1]}"/>
+            <ellipse cx="25" cy="11" rx="12" ry="7" fill="${cloudFill[2]}"/>
+            ${drops}
+          </g>
+        </g>`;
+      }
+    } else {
+      character = `<g class="moonChar" transform="translate(${(W/2).toFixed(1)},36)">
+        <path d="M9 0 A15 15 0 1 1 -5 -11 A11 11 0 1 0 9 0 Z" fill="#eaf0ff"/>
+        <circle cx="-2" cy="-2" r="1.2" fill="#9aa6c0"/>
+        <path d="M-6 4 q2.5 2 5 0" stroke="#9aa6c0" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+        <text class="zzz" x="12" y="-10" fill="#eaf0ff" font-size="8" font-weight="700">z</text>
+        <text class="zzz" x="16" y="-16" fill="#eaf0ff" font-size="10" font-weight="700" style="animation-delay:1s">Z</text>
+      </g>`;
+    }
+
+    let stars = '';
+    if (!isDay){
+      const pts = [[40,28],[80,16],[130,34],[210,22],[260,40],[285,18],[160,18]];
+      stars = pts.map((p,i)=>`<circle class="twinkle" cx="${p[0]}" cy="${p[1]}" r="1.4" fill="#fff" style="animation-delay:${(i*0.3).toFixed(1)}s"/>`).join('');
+    }
+
+    return { defs, bg, stars, character };
   }
 
   // Maps Open-Meteo's WMO weather_code to a simple visual bucket for the
@@ -1409,114 +1489,12 @@
   // when the sky's clear, or peeking shyly from behind a cloud when it's not).
   // By night: a sleeping crescent moon with floating Zzz's and twinkling stars.
   // "Now" relative to sunrise/sunset decides which character to show.
+  // Sun/moon now lives inside the combined hero scene. When sun data arrives
+  // or refreshes, repaint that scene (it reads sunData internally). Falls back
+  // to a clear-day sky until data loads.
   function renderSunScene(){
-    const svg = $('sunSky');
-    if (!svg || !sunData || !sunData.daily || !sunData.daily.sunrise) return;
-    const D = sunData.daily;
-    const todaySunrise = new Date(D.sunrise[0]);
-    const todaySunset = new Date(D.sunset[0]);
-    const now = new Date();
-    const isDay = now >= todaySunrise && now < todaySunset;
-    const todayCode = D.weather_code ? D.weather_code[0] : 0;
-    const wxCat = wxCategory(todayCode);
-    const clear = wxCat === 'clear';
-
-    // progress of sun across the sky (0 at sunrise, 1 at sunset) for arc dot
-    let prog = (now - todaySunrise) / (todaySunset - todaySunrise);
-    prog = Math.max(0, Math.min(1, prog));
-
-    // fill times + daylight
-    $('sunriseT').textContent = todaySunrise.toLocaleTimeString([], {timeZone:'America/Toronto', hour:'2-digit', minute:'2-digit'});
-    $('sunsetT').textContent = todaySunset.toLocaleTimeString([], {timeZone:'America/Toronto', hour:'2-digit', minute:'2-digit'});
-    if (D.daylight_duration && D.daylight_duration[0] != null){
-      const secs = D.daylight_duration[0];
-      const h = Math.floor(secs/3600), m = Math.round((secs%3600)/60);
-      $('daylightT').textContent = `${h}h ${m}m`;
-    }
-
-    const W = 320, H = 120;
-    const skyGrad = isDay
-      ? (clear
-          ? `<linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2a7fb8"/><stop offset="100%" stop-color="#7ec8e3"/></linearGradient>`
-          : `<linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3a5a72"/><stop offset="100%" stop-color="#6a8aa0"/></linearGradient>`)
-      : `<linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a1228"/><stop offset="100%" stop-color="#1b2a4a"/></linearGradient>`;
-
-    // arc path the sun/moon travels
-    const arc = `M20 ${H-18} Q${W/2} -8 ${W-20} ${H-18}`;
-    // position along that quadratic bezier at t=prog
-    const t = isDay ? prog : 0.5;
-    const bx = (1-t)*(1-t)*20 + 2*(1-t)*t*(W/2) + t*t*(W-20);
-    const by = (1-t)*(1-t)*(H-18) + 2*(1-t)*t*(-8) + t*t*(H-18);
-
-    let character = '';
-    if (isDay){
-      if (clear){
-        // happy sun with sunglasses + grin
-        character = `<g class="sunChar" transform="translate(${bx.toFixed(1)},${Math.max(20,by).toFixed(1)})">
-          <g>${Array.from({length:12}).map((_,k)=>{const a=k*30*Math.PI/180;const x1=Math.cos(a)*20,y1=Math.sin(a)*20,x2=Math.cos(a)*27,y2=Math.sin(a)*27;return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#ffd24a" stroke-width="2.5" stroke-linecap="round"/>`;}).join('')}</g>
-          <circle r="17" fill="#ffd24a"/>
-          <g class="sunGlasses">
-            <rect x="-13" y="-5" width="10" height="7" rx="2" fill="#1a1a1a"/>
-            <rect x="3" y="-5" width="10" height="7" rx="2" fill="#1a1a1a"/>
-            <line x1="-3" y1="-2" x2="3" y2="-2" stroke="#1a1a1a" stroke-width="1.6"/>
-            <line x1="-13" y1="-3" x2="-16" y2="-4" stroke="#1a1a1a" stroke-width="1.6"/>
-          </g>
-          <path d="M-6 6 Q0 11 6 6" stroke="#b8860b" stroke-width="2" fill="none" stroke-linecap="round"/>
-        </g>`;
-      } else {
-        // GRUMPY sun, with clouds drifting in front of him. The worse the
-        // weather, the darker/bigger the clouds (and rain/storm get drops).
-        const cloudFill = wxCat === 'storm' ? ['#5c6b7a','#6e7d8c','#4a5763']
-                        : wxCat === 'rain'  ? ['#7c8fa0','#8fa3b3','#6e8190']
-                        : ['#dde6ec','#e8eef2','#cfdae2'];
-        const drops = (wxCat === 'rain' || wxCat === 'storm')
-          ? `<g class="rain">${[-14,-4,6,16].map((dx,i)=>`<line x1="${dx}" y1="14" x2="${dx-3}" y2="21" stroke="#9fd0ff" stroke-width="1.6" stroke-linecap="round" style="animation-delay:${(i*0.2).toFixed(1)}s"/>`).join('')}</g>`
-          : '';
-        character = `<g transform="translate(${bx.toFixed(1)},${Math.max(24,by).toFixed(1)})">
-          <g class="sunChar">
-            <circle r="15" fill="#ffd24a"/>
-            <!-- grumpy: angled eyebrows + flat/frown mouth -->
-            <line x1="-8" y1="-6" x2="-2" y2="-4" stroke="#b8860b" stroke-width="2" stroke-linecap="round"/>
-            <line x1="8" y1="-6" x2="2" y2="-4" stroke="#b8860b" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="-5" cy="-1" r="1.7" fill="#b8860b"/>
-            <circle cx="5" cy="-1" r="1.7" fill="#b8860b"/>
-            <path d="M-5 7 Q0 3 5 7" stroke="#b8860b" stroke-width="2" fill="none" stroke-linecap="round"/>
-          </g>
-          <g class="hideCloud">
-            <ellipse cx="12" cy="9" rx="23" ry="12" fill="${cloudFill[0]}"/>
-            <ellipse cx="-7" cy="12" rx="14" ry="9" fill="${cloudFill[1]}"/>
-            <ellipse cx="28" cy="12" rx="14" ry="8" fill="${cloudFill[2]}"/>
-            ${drops}
-          </g>
-        </g>`;
-      }
-    } else {
-      // sleeping crescent moon with Zzz
-      character = `<g class="moonChar" transform="translate(${(W/2).toFixed(1)},42)">
-        <path d="M10 0 A17 17 0 1 1 -6 -13 A13 13 0 1 0 10 0 Z" fill="#eaf0ff"/>
-        <circle cx="-3" cy="-2" r="1.4" fill="#9aa6c0"/>
-        <path d="M-7 4 q3 2 6 0" stroke="#9aa6c0" stroke-width="1.4" fill="none" stroke-linecap="round"/>
-        <text class="zzz" x="14" y="-12" fill="#eaf0ff" font-size="9" font-weight="700">z</text>
-        <text class="zzz" x="18" y="-18" fill="#eaf0ff" font-size="11" font-weight="700" style="animation-delay:1s">Z</text>
-      </g>`;
-    }
-
-    // stars at night
-    let stars = '';
-    if (!isDay){
-      const pts = [[40,30],[80,18],[130,40],[210,25],[260,45],[290,22],[160,20]];
-      stars = pts.map((p,i)=>`<circle class="twinkle" cx="${p[0]}" cy="${p[1]}" r="1.5" fill="#fff" style="animation-delay:${(i*0.3).toFixed(1)}s"/>`).join('');
-    }
-
-    svg.innerHTML = `
-      <defs>${skyGrad}</defs>
-      <rect x="0" y="0" width="${W}" height="${H}" fill="url(#skyG)"/>
-      ${stars}
-      <path class="sunArc" d="${arc}" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" stroke-dasharray="3 5"/>
-      ${isDay ? `<circle cx="20" cy="${H-18}" r="2.5" fill="#ffd24a"/><circle cx="${W-20}" cy="${H-18}" r="2.5" fill="#ff8c5a"/>` : ''}
-      ${character}
-      <rect x="0" y="${H-14}" width="${W}" height="14" fill="${isDay ? 'rgba(20,80,130,0.6)' : 'rgba(10,30,60,0.7)'}"/>
-    `;
+    if (lastVerdictTier != null) renderBoatScene(lastVerdictTier);
+    else renderBoatScene(0);
   }
 
   // Renders the vessel picker grid; each tile is a tappable mini-preview.
@@ -1561,8 +1539,6 @@
     if (lastVerdictTier != null) renderBoatScene(lastVerdictTier);
     if (fcData) renderWxStrip();
   }
-
-  let lastVerdictTier = null;
 
   function renderOutlook(station){
     if (!fcData) return;
