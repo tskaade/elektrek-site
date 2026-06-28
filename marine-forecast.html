@@ -237,7 +237,7 @@
   .boatScene{position:relative; height:120px; margin:10px 0 4px; border-radius:12px; overflow:hidden;
              background:linear-gradient(180deg,#0e2940 0%,#0c3350 55%,#0a3a5e 100%);}
   .boatScene svg{position:absolute; inset:0; width:100%; height:100%;}
-  .boatGroup{transform-origin:150px 78px; animation:boatRock 3s ease-in-out infinite;}
+  .boatGroup{transform-origin:50% 65%; animation:boatRock 3s ease-in-out infinite;}
   @keyframes boatRock{0%,100%{transform:rotate(var(--rk,4deg)) translateY(0);}
                       50%{transform:rotate(calc(var(--rk,4deg) * -1)) translateY(var(--bob,2px));}}
   .rkCalm{--rk:2deg;  --bob:1px; animation-duration:4.5s;}
@@ -484,7 +484,7 @@
 <footer>
   Data from NOAA NDBC, buoys owned &amp; maintained by Environment and Climate Change Canada.<br>
   Auto-refreshes every 10 min. Tap a station above to switch.<br>
-  <span style="opacity:0.6">build v16 · 2026-06-28</span>
+  <span style="opacity:0.6">build v17 · 2026-06-28</span>
 </footer>
 
 <script>
@@ -1230,29 +1230,35 @@
 
     // Sky comes from real weather + sun position, not the boating tier, so a
     // calm-but-overcast day shows a grumpy clouded sun above a steady boat.
-    const sky = buildSkyCharacter();
+    const sky = buildSkyCharacter(600);
 
     // Wave amplitude scales with conditions: glassy when calm, choppy when
     // rough. Both layers share this so the boat sits in matching water.
     const amp = [3, 5, 7, 10, 13][tier];          // crest height by tier
     const wl = 40;                                 // wavelength (px)
-    // Build one wave layer. Layers drift the SAME direction (parallax: back
-    // slower than front) so together they read as a single moving surface.
+    const VW = 600;                                // viewBox width (wide, matches
+                                                   // the real container shape so
+                                                   // nothing needs cropping)
     const wave = (y, fill, cls, a) => {
       let d = `M-${wl} ${y} `;
-      for (let x = -wl; x <= 300 + wl*2; x += wl){
+      for (let x = -wl; x <= VW + wl*2; x += wl){
         d += `q ${wl/4} -${a} ${wl/2} 0 q ${wl/4} ${a} ${wl/2} 0 `;
       }
-      return `<path class="${cls}" d="${d} L${300+wl*2} 120 L-${wl} 120 Z" fill="${fill}"/>`;
+      return `<path class="${cls}" d="${d} L${VW+wl*2} 120 L-${wl} 120 Z" fill="${fill}"/>`;
     };
 
-    scene.innerHTML = `<svg viewBox="0 0 300 120" preserveAspectRatio="xMidYMid slice">
+    // preserveAspectRatio="none": the SVG stretches to fill the container
+    // exactly, so NOTHING is ever cropped (this was the bug — "slice" cropped
+    // the sun out of the visible band on wide phone screens). The viewBox is
+    // wide (600x120 ≈ 5:1) to match the container's real proportions, keeping
+    // horizontal stretch minimal so the sun stays nearly round.
+    scene.innerHTML = `<svg viewBox="0 0 ${VW} 120" preserveAspectRatio="none" width="100%" height="100%">
       ${sky.defs}
-      <rect x="0" y="0" width="300" height="120" fill="${sky.bg}"/>
+      <rect x="0" y="0" width="${VW}" height="120" fill="${sky.bg}"/>
       ${sky.stars}
       ${sky.character}
       <g class="boatGroup ${rockClass}">
-        ${CRAFTS[getCraft()].draw(150, 78, 1.05, hull)}
+        ${CRAFTS[getCraft()].draw(VW/2, 78, 1.05, hull)}
       </g>
       ${wave(88, 'rgba(40,110,160,0.55)', 'seaB', amp*0.8)}
       ${wave(94, 'rgba(20,80,130,0.85)', 'seaA', amp)}
@@ -1273,7 +1279,8 @@
     return new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +(m[6]||0));
   }
 
-  function buildSkyCharacter(){
+  function buildSkyCharacter(W){
+    W = W || 300;
     // sensible defaults if sun data hasn't arrived yet: assume clear daytime
     let isDay = true, wxCat = 'clear', prog = 0.5;
 
@@ -1315,7 +1322,6 @@
     }
     const clear = wxCat === 'clear';
 
-    const W = 300;
     const defs = isDay
       ? (clear
           ? `<defs><linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2a7fb8"/><stop offset="100%" stop-color="#7ec8e3"/></linearGradient></defs>`
@@ -1323,13 +1329,12 @@
       : `<defs><linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a1228"/><stop offset="100%" stop-color="#1b2a4a"/></linearGradient></defs>`;
     const bg = 'url(#skyG)';
 
-    // sun/moon travels an arc. With the scene's "slice" scaling, the vertical
-    // CENTER of the viewBox is always visible while top/bottom may crop on wide
-    // screens — so the arc is kept in that safe middle band: noon peak ~y42,
-    // horizon ends ~y66, keeping the sun + rays on screen at every hour.
+    // sun/moon travels an arc across the sky. Since the scene no longer crops
+    // (preserveAspectRatio="none"), the full 0..120 height is visible, so the
+    // sun can ride a proper high arc: noon peak ~y28, horizon ends ~y60.
     const t = isDay ? prog : 0.5;
-    const ax0 = 38, ax1 = W-38;
-    const yEnd = 66, yPeak = 42;   // higher number = lower on screen
+    const ax0 = 50, ax1 = W-50;
+    const yEnd = 60, yPeak = 28;   // higher number = lower on screen
     let bx = (1-t)*(1-t)*ax0 + 2*(1-t)*t*(W/2) + t*t*ax1;
     let by = (1-t)*(1-t)*yEnd + 2*(1-t)*t*(2*yPeak - yEnd) + t*t*yEnd;
     if (isNaN(bx)) bx = W/2;        // never let a bad value park the sun at 0,0
@@ -1385,8 +1390,8 @@
 
     let stars = '';
     if (!isDay){
-      const pts = [[40,28],[80,16],[130,34],[210,22],[260,40],[285,18],[160,18]];
-      stars = pts.map((p,i)=>`<circle class="twinkle" cx="${p[0]}" cy="${p[1]}" r="1.4" fill="#fff" style="animation-delay:${(i*0.3).toFixed(1)}s"/>`).join('');
+      const pts = [[0.13,28],[0.27,16],[0.43,34],[0.58,20],[0.70,40],[0.82,18],[0.92,30],[0.50,15]];
+      stars = pts.map((p,i)=>`<circle class="twinkle" cx="${(p[0]*W).toFixed(0)}" cy="${p[1]}" r="1.4" fill="#fff" style="animation-delay:${(i*0.3).toFixed(1)}s"/>`).join('');
     }
 
     return { defs, bg, stars, character };
