@@ -484,7 +484,7 @@
 <footer>
   Data from NOAA NDBC, buoys owned &amp; maintained by Environment and Climate Change Canada.<br>
   Auto-refreshes every 10 min. Tap a station above to switch.<br>
-  <span style="opacity:0.6">build v13 · 2026-06-20</span>
+  <span style="opacity:0.6">build v15 · 2026-06-28</span>
 </footer>
 
 <script>
@@ -1310,16 +1310,20 @@
       : `<defs><linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a1228"/><stop offset="100%" stop-color="#1b2a4a"/></linearGradient></defs>`;
     const bg = 'url(#skyG)';
 
-    // sun/moon travels a low arc across the top of the scene
+    // sun/moon travels an arc. With the scene's "slice" scaling, the vertical
+    // CENTER of the viewBox is always visible while top/bottom may crop on wide
+    // screens — so the arc is kept in that safe middle band: noon peak ~y42,
+    // horizon ends ~y66, keeping the sun + rays on screen at every hour.
     const t = isDay ? prog : 0.5;
-    const ax0 = 40, ax1 = W-40, peak = 8;
+    const ax0 = 38, ax1 = W-38;
+    const yEnd = 66, yPeak = 42;   // higher number = lower on screen
     const bx = (1-t)*(1-t)*ax0 + 2*(1-t)*t*(W/2) + t*t*ax1;
-    const by = (1-t)*(1-t)*46 + 2*(1-t)*t*peak + t*t*46;
+    const by = (1-t)*(1-t)*yEnd + 2*(1-t)*t*(2*yPeak - yEnd) + t*t*yEnd;
 
     let character = '';
     if (isDay){
       if (clear){
-        character = `<g class="sunChar" transform="translate(${bx.toFixed(1)},${Math.max(20,by).toFixed(1)})">
+        character = `<g class="sunChar" transform="translate(${bx.toFixed(1)},${by.toFixed(1)})">
           <g>${Array.from({length:12}).map((_,k)=>{const a=k*30*Math.PI/180;const x1=Math.cos(a)*16,y1=Math.sin(a)*16,x2=Math.cos(a)*22,y2=Math.sin(a)*22;return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#ffd24a" stroke-width="2.2" stroke-linecap="round"/>`;}).join('')}</g>
           <circle r="13" fill="#ffd24a"/>
           <g class="sunGlasses">
@@ -1337,7 +1341,7 @@
         const drops = (wxCat === 'rain' || wxCat === 'storm')
           ? `<g class="rain">${[-12,-3,6,15].map((dx,i)=>`<line x1="${dx}" y1="12" x2="${dx-3}" y2="19" stroke="#9fd0ff" stroke-width="1.5" stroke-linecap="round" style="animation-delay:${(i*0.2).toFixed(1)}s"/>`).join('')}</g>`
           : '';
-        character = `<g transform="translate(${bx.toFixed(1)},${Math.max(24,by).toFixed(1)})">
+        character = `<g transform="translate(${bx.toFixed(1)},${by.toFixed(1)})">
           <g class="sunChar">
             <circle r="13" fill="#ffd24a"/>
             <line x1="-7" y1="-5" x2="-2" y2="-3.5" stroke="#b8860b" stroke-width="1.8" stroke-linecap="round"/>
@@ -1355,13 +1359,13 @@
         </g>`;
       }
     } else {
-      character = `<g class="moonChar" transform="translate(${(W/2).toFixed(1)},36)">
-        <path d="M9 0 A15 15 0 1 1 -5 -11 A11 11 0 1 0 9 0 Z" fill="#eaf0ff"/>
-        <circle cx="-2" cy="-2" r="1.2" fill="#9aa6c0"/>
-        <path d="M-6 4 q2.5 2 5 0" stroke="#9aa6c0" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-        <text class="zzz" x="12" y="-10" fill="#eaf0ff" font-size="8" font-weight="700">z</text>
-        <text class="zzz" x="16" y="-16" fill="#eaf0ff" font-size="10" font-weight="700" style="animation-delay:1s">Z</text>
-      </g>`;
+      const moon = buildMoonPhase(13);
+      character = `<g class="moonChar" transform="translate(${bx.toFixed(1)},${by.toFixed(1)})">
+        ${moon.svg}
+        <text class="zzz" x="16" y="-12" fill="#eaf0ff" font-size="8" font-weight="700">z</text>
+        <text class="zzz" x="20" y="-18" fill="#eaf0ff" font-size="10" font-weight="700" style="animation-delay:1s">Z</text>
+      </g>
+      <text x="${(W/2).toFixed(0)}" y="112" fill="#aab4cc" font-size="9" text-anchor="middle" font-family="system-ui">${moon.name}</text>`;
     }
 
     let stars = '';
@@ -1371,6 +1375,98 @@
     }
 
     return { defs, bg, stars, character };
+  }
+
+  // Returns the current moon phase as a fraction 0..1 (0 = new, 0.25 = first
+  // quarter, 0.5 = full, 0.75 = last quarter). Based on a known new-moon epoch
+  // (2000-01-06 18:14 UTC) and the mean synodic month (29.530588853 days).
+  function moonPhaseFraction(date){
+    const synodic = 29.530588853;
+    const epoch = Date.UTC(2000, 0, 6, 18, 14, 0) / 86400000; // in days
+    const now = date.getTime() / 86400000;
+    let age = ((now - epoch) % synodic) / synodic;
+    if (age < 0) age += 1;
+    return age;
+  }
+
+  function moonPhaseName(f){
+    if (f < 0.03 || f > 0.97) return 'New Moon';
+    if (f < 0.22) return 'Waxing Crescent';
+    if (f < 0.28) return 'First Quarter';
+    if (f < 0.47) return 'Waxing Gibbous';
+    if (f < 0.53) return 'Full Moon';
+    if (f < 0.72) return 'Waning Gibbous';
+    if (f < 0.78) return 'Last Quarter';
+    return 'Waning Crescent';
+  }
+
+  // Builds a smiling moon showing the correct illuminated shape for phase f.
+  // Clean two-half technique: the disc is split by its vertical diameter. One
+  // half is a solid semicircle; the other half is a half-ellipse whose width
+  // (rx) and fill flip as the terminator sweeps across — this yields correct
+  // crescent → quarter → gibbous → full shapes for both waxing and waning.
+  function buildMoonPhase(r){
+    const f = moonPhaseFraction(new Date());
+    const lit = '#eef3ff', shadow = '#26324a';
+    const name = moonPhaseName(f);
+
+    // illumination 0..1..0 across the cycle, and lit side
+    const illum = f <= 0.5 ? (f / 0.5) : ((1 - f) / 0.5); // 0 new, 1 full
+    const waxing = f < 0.5;                                // lit side = right when waxing
+
+    // rx of the terminator half-ellipse: r at new/full edge cases handled below
+    const rx = Math.abs(r * (1 - 2 * illum)).toFixed(2);
+    const gibbous = illum > 0.5;
+
+    // Right semicircle path (x>=0) and left semicircle path (x<=0)
+    const rightHalf = `M0 ${-r} A ${r} ${r} 0 0 1 0 ${r} Z`;
+    const leftHalf  = `M0 ${-r} A ${r} ${r} 0 0 0 0 ${r} Z`;
+    // Terminator half-ellipse on the right (sweep 1) or left (sweep 0)
+    const ellRight = `M0 ${-r} A ${rx} ${r} 0 0 1 0 ${r} Z`;
+    const ellLeft  = `M0 ${-r} A ${rx} ${r} 0 0 0 0 ${r} Z`;
+
+    let face;
+    if (f < 0.02 || f > 0.98){
+      face = `<circle r="${r}" fill="${shadow}" stroke="#3a4a66" stroke-width="1"/>`;
+    } else if (illum > 0.98){
+      face = `<circle r="${r}" fill="${lit}"/>`;
+    } else if (waxing){
+      // right side lit
+      if (!gibbous){
+        // crescent→quarter: lit = right semicircle minus a shadow ellipse
+        face = `<circle r="${r}" fill="${shadow}"/>
+                <path d="${rightHalf}" fill="${lit}"/>
+                <path d="${ellRight}" fill="${shadow}"/>`;
+      } else {
+        // quarter→full: lit right half + lit ellipse bulging into left half
+        face = `<circle r="${r}" fill="${shadow}"/>
+                <path d="${rightHalf}" fill="${lit}"/>
+                <path d="${ellLeft}" fill="${lit}"/>`;
+      }
+    } else {
+      // waning: left side lit
+      if (!gibbous){
+        face = `<circle r="${r}" fill="${shadow}"/>
+                <path d="${leftHalf}" fill="${lit}"/>
+                <path d="${ellLeft}" fill="${shadow}"/>`;
+      } else {
+        face = `<circle r="${r}" fill="${shadow}"/>
+                <path d="${leftHalf}" fill="${lit}"/>
+                <path d="${ellRight}" fill="${lit}"/>`;
+      }
+    }
+
+    // happy face on the lit side (centered at full)
+    const isFull = illum > 0.98;
+    const faceShift = isFull ? 0 : (waxing ? r*0.33 : -r*0.33);
+    const eyeColor = '#26324a';
+    const smile = `<g transform="translate(${faceShift.toFixed(1)},0)">
+      <circle cx="${(-r*0.20).toFixed(1)}" cy="${(-r*0.16).toFixed(1)}" r="${(r*0.075).toFixed(1)}" fill="${eyeColor}"/>
+      <circle cx="${(r*0.20).toFixed(1)}" cy="${(-r*0.16).toFixed(1)}" r="${(r*0.075).toFixed(1)}" fill="${eyeColor}"/>
+      <path d="M${(-r*0.24).toFixed(1)} ${(r*0.16).toFixed(1)} Q0 ${(r*0.40).toFixed(1)} ${(r*0.24).toFixed(1)} ${(r*0.16).toFixed(1)}" stroke="${eyeColor}" stroke-width="${(r*0.065).toFixed(1)}" fill="none" stroke-linecap="round"/>
+    </g>`;
+
+    return { svg: face + smile, name };
   }
 
   // Maps Open-Meteo's WMO weather_code to a simple visual bucket for the
