@@ -484,7 +484,7 @@
 <footer>
   Data from NOAA NDBC, buoys owned &amp; maintained by Environment and Climate Change Canada.<br>
   Auto-refreshes every 10 min. Tap a station above to switch.<br>
-  <span style="opacity:0.6">build v15 · 2026-06-28</span>
+  <span style="opacity:0.6">build v16 · 2026-06-28</span>
 </footer>
 
 <script>
@@ -1262,42 +1262,55 @@
   // Builds the sky layer (gradient bg, optional stars, and the sun/moon
   // character) for the combined hero scene, sized to its 300×120 canvas.
   // Also fills the sunrise/sunset/daylight text readouts. Returns SVG parts.
+  // Open-Meteo returns local-time strings like "2026-06-28T05:35" (no seconds,
+  // no zone). iOS Safari returns Invalid Date for those, which cascades to NaN
+  // sun positions (rendering the sun at 0,0 — the top-left corner). Parse the
+  // components by hand so every browser agrees and we get a valid local Date.
+  function parseLocalDateTime(s){
+    if (!s) return null;
+    const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (!m) { const d = new Date(s); return isNaN(d) ? null : d; }
+    return new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +(m[6]||0));
+  }
+
   function buildSkyCharacter(){
     // sensible defaults if sun data hasn't arrived yet: assume clear daytime
     let isDay = true, wxCat = 'clear', prog = 0.5;
 
     if (sunData && sunData.daily && sunData.daily.sunrise){
       const D = sunData.daily;
-      const sunrise = new Date(D.sunrise[0]);
-      const sunset = new Date(D.sunset[0]);
+      const sunrise = parseLocalDateTime(D.sunrise[0]);
+      const sunset = parseLocalDateTime(D.sunset[0]);
       const now = new Date();
-      isDay = now >= sunrise && now < sunset;
+      if (sunrise && sunset){
+        isDay = now >= sunrise && now < sunset;
 
-      // Prefer the CURRENT sky over the daily summary. The daily weather_code
-      // is the worst condition of the whole day, so a sunny morning with an
-      // afternoon shower in the forecast would wrongly show a grumpy sun now.
-      // current.weather_code reflects what the sky is actually doing.
-      let code = (sunData.current && sunData.current.weather_code != null)
-        ? sunData.current.weather_code
-        : (D.weather_code ? D.weather_code[0] : 0);
-      wxCat = wxCategory(code);
+        // Prefer the CURRENT sky over the daily summary. The daily weather_code
+        // is the worst condition of the whole day, so a sunny morning with an
+        // afternoon shower in the forecast would wrongly show a grumpy sun now.
+        let code = (sunData.current && sunData.current.weather_code != null)
+          ? sunData.current.weather_code
+          : (D.weather_code ? D.weather_code[0] : 0);
+        wxCat = wxCategory(code);
 
-      // Refinement: WMO codes 1-2 ("mainly/partly cloudy") cover a wide range.
-      // If we have an actual cloud_cover %, treat a mostly-blue sky as clear so
-      // the happy sun shows on a nice day with a few clouds around.
-      const cc = (sunData.current && sunData.current.cloud_cover != null) ? sunData.current.cloud_cover : null;
-      if (cc != null){
-        if (cc <= 40) wxCat = (wxCat === 'rain' || wxCat === 'storm' || wxCat === 'snow') ? wxCat : 'clear';
-        else if (cc <= 70 && wxCat === 'clear') wxCat = 'cloudy';
-      }
+        // Refinement: WMO codes 1-2 ("mainly/partly cloudy") cover a wide range.
+        // If we have an actual cloud_cover %, treat a mostly-blue sky as clear.
+        const cc = (sunData.current && sunData.current.cloud_cover != null) ? sunData.current.cloud_cover : null;
+        if (cc != null){
+          if (cc <= 40) wxCat = (wxCat === 'rain' || wxCat === 'storm' || wxCat === 'snow') ? wxCat : 'clear';
+          else if (cc <= 70 && wxCat === 'clear') wxCat = 'cloudy';
+        }
 
-      prog = Math.max(0, Math.min(1, (now - sunrise) / (sunset - sunrise)));
+        const span = sunset - sunrise;
+        const p = span > 0 ? (now - sunrise) / span : 0.5;
+        prog = isNaN(p) ? 0.5 : Math.max(0, Math.min(1, p));
 
-      $('sunriseT').textContent = sunrise.toLocaleTimeString([], {timeZone:'America/Toronto', hour:'2-digit', minute:'2-digit'});
-      $('sunsetT').textContent = sunset.toLocaleTimeString([], {timeZone:'America/Toronto', hour:'2-digit', minute:'2-digit'});
-      if (D.daylight_duration && D.daylight_duration[0] != null){
-        const secs = D.daylight_duration[0];
-        $('daylightT').textContent = `${Math.floor(secs/3600)}h ${Math.round((secs%3600)/60)}m`;
+        $('sunriseT').textContent = sunrise.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        $('sunsetT').textContent = sunset.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        if (D.daylight_duration && D.daylight_duration[0] != null){
+          const secs = D.daylight_duration[0];
+          $('daylightT').textContent = `${Math.floor(secs/3600)}h ${Math.round((secs%3600)/60)}m`;
+        }
       }
     }
     const clear = wxCat === 'clear';
@@ -1317,8 +1330,10 @@
     const t = isDay ? prog : 0.5;
     const ax0 = 38, ax1 = W-38;
     const yEnd = 66, yPeak = 42;   // higher number = lower on screen
-    const bx = (1-t)*(1-t)*ax0 + 2*(1-t)*t*(W/2) + t*t*ax1;
-    const by = (1-t)*(1-t)*yEnd + 2*(1-t)*t*(2*yPeak - yEnd) + t*t*yEnd;
+    let bx = (1-t)*(1-t)*ax0 + 2*(1-t)*t*(W/2) + t*t*ax1;
+    let by = (1-t)*(1-t)*yEnd + 2*(1-t)*t*(2*yPeak - yEnd) + t*t*yEnd;
+    if (isNaN(bx)) bx = W/2;        // never let a bad value park the sun at 0,0
+    if (isNaN(by)) by = yPeak;
 
     let character = '';
     if (isDay){
