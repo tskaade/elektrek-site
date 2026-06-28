@@ -234,9 +234,9 @@
   .disclaimerCard b{color:var(--txt);}
 
   /* ---- Boat-o-meter: kid-friendly conditions animation ---- */
-  .boatScene{position:relative; width:100%; aspect-ratio:600/150; max-height:200px; margin:10px 0 4px; border-radius:12px; overflow:hidden;
+  .boatScene{position:relative; width:100%; aspect-ratio:16/7; min-height:150px; max-height:210px; margin:10px 0 4px; border-radius:12px; overflow:hidden;
              background:linear-gradient(180deg,#0e2940 0%,#0c3350 55%,#0a3a5e 100%);}
-  .boatScene svg{position:absolute; inset:0; width:100%; height:100%;}
+  .boatScene svg{position:absolute; inset:0; width:100%; height:100%; display:block;}
   .boatGroup{transform-origin:50% 65%; animation:boatRock 3s ease-in-out infinite;}
   @keyframes boatRock{0%,100%{transform:rotate(var(--rk,4deg)) translateY(0);}
                       50%{transform:rotate(calc(var(--rk,4deg) * -1)) translateY(var(--bob,2px));}}
@@ -484,7 +484,7 @@
 <footer>
   Data from NOAA NDBC, buoys owned &amp; maintained by Environment and Climate Change Canada.<br>
   Auto-refreshes every 10 min. Tap a station above to switch.<br>
-  <span style="opacity:0.6">build v18 · 2026-06-28</span>
+  <span style="opacity:0.6">build v19 · 2026-06-28</span>
 </footer>
 
 <script>
@@ -1228,36 +1228,41 @@
     const rockClass = ['rkCalm','rkGood','rkCaut','rkRough','rkStorm'][tier];
     const hull = ['#3ddc97','#7fd4ff','#ffd166','#ff9f43','#ff4d6d'][tier];
 
-    // Sky comes from real weather + sun position, not the boating tier, so a
-    // calm-but-overcast day shows a grumpy clouded sun above a steady boat.
-    const sky = buildSkyCharacter(600);
+    // Measure the container's ACTUAL pixel size and draw a viewBox of exactly
+    // that size. With a 1:1 viewBox→pixel mapping there is NO scaling at all,
+    // so cropping and stretching are impossible no matter the screen width or
+    // whatever CSS height the container ends up with. This sidesteps every
+    // preserveAspectRatio pitfall that caused the sun to vanish before.
+    const W = Math.max(200, Math.round(scene.clientWidth || 360));
+    const H = Math.max(110, Math.round(scene.clientHeight || 150));
 
-    // Wave amplitude scales with conditions: glassy when calm, choppy when
-    // rough. Both layers share this so the boat sits in matching water.
-    const amp = [3, 5, 7, 10, 13][tier];          // crest height by tier
-    const wl = 40;                                 // wavelength (px)
-    const VW = 600, VH = 150;                      // viewBox matches the container
-                                                   // aspect-ratio (600/150) so the
-                                                   // "meet" fit has no crop, no
-                                                   // stretch, and no empty gaps.
+    const sky = buildSkyCharacter(W, H);
+
+    // waterline sits ~22px above the bottom; boat rides on it
+    const waterY = H - 30;
+    const amp = [3, 5, 7, 10, 13][tier];
+    const wl = 40;
     const wave = (y, fill, cls, a) => {
       let d = `M-${wl} ${y} `;
-      for (let x = -wl; x <= VW + wl*2; x += wl){
+      for (let x = -wl; x <= W + wl*2; x += wl){
         d += `q ${wl/4} -${a} ${wl/2} 0 q ${wl/4} ${a} ${wl/2} 0 `;
       }
-      return `<path class="${cls}" d="${d} L${VW+wl*2} ${VH} L-${wl} ${VH} Z" fill="${fill}"/>`;
+      return `<path class="${cls}" d="${d} L${W+wl*2} ${H} L-${wl} ${H} Z" fill="${fill}"/>`;
     };
 
-    scene.innerHTML = `<svg viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="xMidYMid meet" width="100%" height="100%">
+    // Boat sits ON the front waterline so it reads as riding the waves.
+    const boatY = waterY + 2;
+
+    scene.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%">
       ${sky.defs}
-      <rect x="0" y="0" width="${VW}" height="${VH}" fill="${sky.bg}"/>
+      <rect x="0" y="0" width="${W}" height="${H}" fill="${sky.bg}"/>
       ${sky.stars}
       ${sky.character}
+      ${wave(waterY - 4, 'rgba(40,110,160,0.55)', 'seaB', amp*0.8)}
       <g class="boatGroup ${rockClass}">
-        ${CRAFTS[getCraft()].draw(VW/2, 104, 1.15, hull)}
+        ${CRAFTS[getCraft()].draw(W/2, boatY, 1.15, hull)}
       </g>
-      ${wave(116, 'rgba(40,110,160,0.55)', 'seaB', amp*0.8)}
-      ${wave(122, 'rgba(20,80,130,0.85)', 'seaA', amp)}
+      ${wave(waterY + 2, 'rgba(20,80,130,0.85)', 'seaA', amp)}
     </svg>`;
   }
 
@@ -1275,8 +1280,8 @@
     return new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +(m[6]||0));
   }
 
-  function buildSkyCharacter(W){
-    W = W || 300;
+  function buildSkyCharacter(W, H){
+    W = W || 360; H = H || 150;
     // sensible defaults if sun data hasn't arrived yet: assume clear daytime
     let isDay = true, wxCat = 'clear', prog = 0.5;
 
@@ -1325,12 +1330,14 @@
       : `<defs><linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a1228"/><stop offset="100%" stop-color="#1b2a4a"/></linearGradient></defs>`;
     const bg = 'url(#skyG)';
 
-    // sun/moon travels an arc across the sky. The scene fits with no crop, so
-    // the full height is usable: noon peak ~y32, horizon ends ~y86 (just above
-    // the waterline at ~116). Keeps the sun + rays fully on screen all day.
+    // sun/moon travels an arc. Positions are relative to the measured height
+    // so the sun is always fully visible regardless of the container's size:
+    // it stays in the sky region above the waterline (which is at H-30).
     const t = isDay ? prog : 0.5;
     const ax0 = 55, ax1 = W-55;
-    const yEnd = 86, yPeak = 32;   // higher number = lower on screen
+    const skyFloor = H - 42;             // lowest the sun goes (above waterline)
+    const yEnd = Math.max(28, skyFloor); // horizon height at sunrise/sunset
+    const yPeak = Math.max(22, H*0.18);  // noon height (high up)
     let bx = (1-t)*(1-t)*ax0 + 2*(1-t)*t*(W/2) + t*t*ax1;
     let by = (1-t)*(1-t)*yEnd + 2*(1-t)*t*(2*yPeak - yEnd) + t*t*yEnd;
     if (isNaN(bx)) bx = W/2;        // never let a bad value park the sun at 0,0
@@ -1381,7 +1388,7 @@
         <text class="zzz" x="16" y="-12" fill="#eaf0ff" font-size="8" font-weight="700">z</text>
         <text class="zzz" x="20" y="-18" fill="#eaf0ff" font-size="10" font-weight="700" style="animation-delay:1s">Z</text>
       </g>
-      <text x="${(W/2).toFixed(0)}" y="142" fill="#aab4cc" font-size="9" text-anchor="middle" font-family="system-ui">${moon.name}</text>`;
+      <text x="${(W/2).toFixed(0)}" y="${(H-8).toFixed(0)}" fill="#aab4cc" font-size="9" text-anchor="middle" font-family="system-ui">${moon.name}</text>`;
     }
 
     let stars = '';
