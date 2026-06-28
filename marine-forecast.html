@@ -484,7 +484,7 @@
 <footer>
   Data from NOAA NDBC, buoys owned &amp; maintained by Environment and Climate Change Canada.<br>
   Auto-refreshes every 10 min. Tap a station above to switch.<br>
-  <span style="opacity:0.6">build v22 · 2026-06-28</span>
+  <span style="opacity:0.6">build v23 · 2026-06-28</span>
 </footer>
 
 <script>
@@ -1260,11 +1260,11 @@
         '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="' + sky.bg + '"/>' +
         sky.stars +
         sky.character +
-        wave(waterY, 'rgba(40,110,160,0.55)', 'seaB', amp*0.7) +
+        wave(waterY - 2, 'rgba(40,110,160,0.55)', 'seaB', amp*0.7) +
         '<g class="boatGroup ' + rockClass + '">' +
-          CRAFTS[getCraft()].draw(W/2, waterY + 8, 1.5, hull) +
+          CRAFTS[getCraft()].draw(W/2, waterY - 2, 1.5, hull) +
         '</g>' +
-        wave(waterY + 10, 'rgba(20,80,130,0.9)', 'seaA', amp) +
+        wave(waterY + 12, 'rgba(20,80,130,0.9)', 'seaA', amp) +
       '</svg>';
   }
 
