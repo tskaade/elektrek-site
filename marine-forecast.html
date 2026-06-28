@@ -234,7 +234,7 @@
   .disclaimerCard b{color:var(--txt);}
 
   /* ---- Boat-o-meter: kid-friendly conditions animation ---- */
-  .boatScene{position:relative; height:120px; margin:10px 0 4px; border-radius:12px; overflow:hidden;
+  .boatScene{position:relative; width:100%; aspect-ratio:600/150; max-height:200px; margin:10px 0 4px; border-radius:12px; overflow:hidden;
              background:linear-gradient(180deg,#0e2940 0%,#0c3350 55%,#0a3a5e 100%);}
   .boatScene svg{position:absolute; inset:0; width:100%; height:100%;}
   .boatGroup{transform-origin:50% 65%; animation:boatRock 3s ease-in-out infinite;}
@@ -484,7 +484,7 @@
 <footer>
   Data from NOAA NDBC, buoys owned &amp; maintained by Environment and Climate Change Canada.<br>
   Auto-refreshes every 10 min. Tap a station above to switch.<br>
-  <span style="opacity:0.6">build v17 · 2026-06-28</span>
+  <span style="opacity:0.6">build v18 · 2026-06-28</span>
 </footer>
 
 <script>
@@ -1236,32 +1236,28 @@
     // rough. Both layers share this so the boat sits in matching water.
     const amp = [3, 5, 7, 10, 13][tier];          // crest height by tier
     const wl = 40;                                 // wavelength (px)
-    const VW = 600;                                // viewBox width (wide, matches
-                                                   // the real container shape so
-                                                   // nothing needs cropping)
+    const VW = 600, VH = 150;                      // viewBox matches the container
+                                                   // aspect-ratio (600/150) so the
+                                                   // "meet" fit has no crop, no
+                                                   // stretch, and no empty gaps.
     const wave = (y, fill, cls, a) => {
       let d = `M-${wl} ${y} `;
       for (let x = -wl; x <= VW + wl*2; x += wl){
         d += `q ${wl/4} -${a} ${wl/2} 0 q ${wl/4} ${a} ${wl/2} 0 `;
       }
-      return `<path class="${cls}" d="${d} L${VW+wl*2} 120 L-${wl} 120 Z" fill="${fill}"/>`;
+      return `<path class="${cls}" d="${d} L${VW+wl*2} ${VH} L-${wl} ${VH} Z" fill="${fill}"/>`;
     };
 
-    // preserveAspectRatio="none": the SVG stretches to fill the container
-    // exactly, so NOTHING is ever cropped (this was the bug — "slice" cropped
-    // the sun out of the visible band on wide phone screens). The viewBox is
-    // wide (600x120 ≈ 5:1) to match the container's real proportions, keeping
-    // horizontal stretch minimal so the sun stays nearly round.
-    scene.innerHTML = `<svg viewBox="0 0 ${VW} 120" preserveAspectRatio="none" width="100%" height="100%">
+    scene.innerHTML = `<svg viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="xMidYMid meet" width="100%" height="100%">
       ${sky.defs}
-      <rect x="0" y="0" width="${VW}" height="120" fill="${sky.bg}"/>
+      <rect x="0" y="0" width="${VW}" height="${VH}" fill="${sky.bg}"/>
       ${sky.stars}
       ${sky.character}
       <g class="boatGroup ${rockClass}">
-        ${CRAFTS[getCraft()].draw(VW/2, 78, 1.05, hull)}
+        ${CRAFTS[getCraft()].draw(VW/2, 104, 1.15, hull)}
       </g>
-      ${wave(88, 'rgba(40,110,160,0.55)', 'seaB', amp*0.8)}
-      ${wave(94, 'rgba(20,80,130,0.85)', 'seaA', amp)}
+      ${wave(116, 'rgba(40,110,160,0.55)', 'seaB', amp*0.8)}
+      ${wave(122, 'rgba(20,80,130,0.85)', 'seaA', amp)}
     </svg>`;
   }
 
@@ -1329,12 +1325,12 @@
       : `<defs><linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0a1228"/><stop offset="100%" stop-color="#1b2a4a"/></linearGradient></defs>`;
     const bg = 'url(#skyG)';
 
-    // sun/moon travels an arc across the sky. Since the scene no longer crops
-    // (preserveAspectRatio="none"), the full 0..120 height is visible, so the
-    // sun can ride a proper high arc: noon peak ~y28, horizon ends ~y60.
+    // sun/moon travels an arc across the sky. The scene fits with no crop, so
+    // the full height is usable: noon peak ~y32, horizon ends ~y86 (just above
+    // the waterline at ~116). Keeps the sun + rays fully on screen all day.
     const t = isDay ? prog : 0.5;
-    const ax0 = 50, ax1 = W-50;
-    const yEnd = 60, yPeak = 28;   // higher number = lower on screen
+    const ax0 = 55, ax1 = W-55;
+    const yEnd = 86, yPeak = 32;   // higher number = lower on screen
     let bx = (1-t)*(1-t)*ax0 + 2*(1-t)*t*(W/2) + t*t*ax1;
     let by = (1-t)*(1-t)*yEnd + 2*(1-t)*t*(2*yPeak - yEnd) + t*t*yEnd;
     if (isNaN(bx)) bx = W/2;        // never let a bad value park the sun at 0,0
@@ -1385,7 +1381,7 @@
         <text class="zzz" x="16" y="-12" fill="#eaf0ff" font-size="8" font-weight="700">z</text>
         <text class="zzz" x="20" y="-18" fill="#eaf0ff" font-size="10" font-weight="700" style="animation-delay:1s">Z</text>
       </g>
-      <text x="${(W/2).toFixed(0)}" y="112" fill="#aab4cc" font-size="9" text-anchor="middle" font-family="system-ui">${moon.name}</text>`;
+      <text x="${(W/2).toFixed(0)}" y="142" fill="#aab4cc" font-size="9" text-anchor="middle" font-family="system-ui">${moon.name}</text>`;
     }
 
     let stars = '';
