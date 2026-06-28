@@ -234,7 +234,7 @@
   .disclaimerCard b{color:var(--txt);}
 
   /* ---- Boat-o-meter: kid-friendly conditions animation ---- */
-  .boatScene{position:relative; width:100%; aspect-ratio:16/7; min-height:150px; max-height:210px; margin:10px 0 4px; border-radius:12px; overflow:hidden;
+  .boatScene{position:relative; width:100%; aspect-ratio:16/7; margin:10px 0 4px; border-radius:12px; overflow:hidden;
              background:linear-gradient(180deg,#0e2940 0%,#0c3350 55%,#0a3a5e 100%);}
   .boatScene svg{position:absolute; inset:0; width:100%; height:100%; display:block;}
   .boatGroup{transform-origin:50% 65%; animation:boatRock 3s ease-in-out infinite;}
@@ -484,7 +484,7 @@
 <footer>
   Data from NOAA NDBC, buoys owned &amp; maintained by Environment and Climate Change Canada.<br>
   Auto-refreshes every 10 min. Tap a station above to switch.<br>
-  <span style="opacity:0.6">build v19 · 2026-06-28</span>
+  <span style="opacity:0.6">build v20 · 2026-06-28</span>
 </footer>
 
 <script>
@@ -1228,20 +1228,18 @@
     const rockClass = ['rkCalm','rkGood','rkCaut','rkRough','rkStorm'][tier];
     const hull = ['#3ddc97','#7fd4ff','#ffd166','#ff9f43','#ff4d6d'][tier];
 
-    // Measure the container's ACTUAL pixel size and draw a viewBox of exactly
-    // that size. With a 1:1 viewBox→pixel mapping there is NO scaling at all,
-    // so cropping and stretching are impossible no matter the screen width or
-    // whatever CSS height the container ends up with. This sidesteps every
-    // preserveAspectRatio pitfall that caused the sun to vanish before.
-    const W = Math.max(200, Math.round(scene.clientWidth || 360));
-    const H = Math.max(110, Math.round(scene.clientHeight || 150));
+    // viewBox aspect ratio EXACTLY matches the container's CSS aspect-ratio
+    // (16:7 → 480×210). With preserveAspectRatio="none" the SVG fills the box
+    // by stretching identically in x and y (same ratio), so there is zero
+    // distortion AND zero cropping at any screen size. No layout measurement
+    // needed (clientWidth is 0 before layout — that was the previous failure).
+    const W = 480, H = 210;
 
     const sky = buildSkyCharacter(W, H);
 
-    // waterline sits ~22px above the bottom; boat rides on it
-    const waterY = H - 30;
-    const amp = [3, 5, 7, 10, 13][tier];
-    const wl = 40;
+    const waterY = H - 46;
+    const amp = [4, 7, 10, 14, 18][tier];
+    const wl = 56;
     const wave = (y, fill, cls, a) => {
       let d = `M-${wl} ${y} `;
       for (let x = -wl; x <= W + wl*2; x += wl){
@@ -1250,19 +1248,16 @@
       return `<path class="${cls}" d="${d} L${W+wl*2} ${H} L-${wl} ${H} Z" fill="${fill}"/>`;
     };
 
-    // Boat sits ON the front waterline so it reads as riding the waves.
-    const boatY = waterY + 2;
-
-    scene.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%">
+    scene.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" width="100%" height="100%">
       ${sky.defs}
       <rect x="0" y="0" width="${W}" height="${H}" fill="${sky.bg}"/>
       ${sky.stars}
       ${sky.character}
-      ${wave(waterY - 4, 'rgba(40,110,160,0.55)', 'seaB', amp*0.8)}
+      ${wave(waterY - 6, 'rgba(40,110,160,0.55)', 'seaB', amp*0.8)}
       <g class="boatGroup ${rockClass}">
-        ${CRAFTS[getCraft()].draw(W/2, boatY, 1.15, hull)}
+        ${CRAFTS[getCraft()].draw(W/2, waterY + 4, 1.5, hull)}
       </g>
-      ${wave(waterY + 2, 'rgba(20,80,130,0.85)', 'seaA', amp)}
+      ${wave(waterY + 4, 'rgba(20,80,130,0.85)', 'seaA', amp)}
     </svg>`;
   }
 
