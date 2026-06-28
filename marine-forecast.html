@@ -484,7 +484,7 @@
 <footer>
   Data from NOAA NDBC, buoys owned &amp; maintained by Environment and Climate Change Canada.<br>
   Auto-refreshes every 10 min. Tap a station above to switch.<br>
-  <span style="opacity:0.6">build v12 · 2026-06-20</span>
+  <span style="opacity:0.6">build v13 · 2026-06-20</span>
 </footer>
 
 <script>
@@ -1076,6 +1076,7 @@
     if (!info || info.lat == null) return;
     const params = new URLSearchParams({
       latitude: info.lat, longitude: info.lon,
+      current: 'weather_code,cloud_cover',
       daily: 'sunrise,sunset,daylight_duration,weather_code',
       timezone: 'America/Toronto',
       forecast_days: '1'
@@ -1087,7 +1088,6 @@
       const j = await res.json();
       if (j && j.daily && j.daily.sunrise){ sunData = j; renderSunScene(); }
     } catch (err) {
-      const b = $('sunTimes');
       // leave the placeholder dashes; non-critical
     }
   }
@@ -1272,7 +1272,25 @@
       const sunset = new Date(D.sunset[0]);
       const now = new Date();
       isDay = now >= sunrise && now < sunset;
-      wxCat = wxCategory(D.weather_code ? D.weather_code[0] : 0);
+
+      // Prefer the CURRENT sky over the daily summary. The daily weather_code
+      // is the worst condition of the whole day, so a sunny morning with an
+      // afternoon shower in the forecast would wrongly show a grumpy sun now.
+      // current.weather_code reflects what the sky is actually doing.
+      let code = (sunData.current && sunData.current.weather_code != null)
+        ? sunData.current.weather_code
+        : (D.weather_code ? D.weather_code[0] : 0);
+      wxCat = wxCategory(code);
+
+      // Refinement: WMO codes 1-2 ("mainly/partly cloudy") cover a wide range.
+      // If we have an actual cloud_cover %, treat a mostly-blue sky as clear so
+      // the happy sun shows on a nice day with a few clouds around.
+      const cc = (sunData.current && sunData.current.cloud_cover != null) ? sunData.current.cloud_cover : null;
+      if (cc != null){
+        if (cc <= 40) wxCat = (wxCat === 'rain' || wxCat === 'storm' || wxCat === 'snow') ? wxCat : 'clear';
+        else if (cc <= 70 && wxCat === 'clear') wxCat = 'cloudy';
+      }
+
       prog = Math.max(0, Math.min(1, (now - sunrise) / (sunset - sunrise)));
 
       $('sunriseT').textContent = sunrise.toLocaleTimeString([], {timeZone:'America/Toronto', hour:'2-digit', minute:'2-digit'});
