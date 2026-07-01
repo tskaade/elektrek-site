@@ -317,72 +317,88 @@
   // level 0 = cheeky (mild groaner), 1 = salty (clear once you think), 2 = below deck (you'll regret it)
   // Hand-written so each one actually works as a pun, not random mashups.
   // ---- Combinatorial pun engine ----
-  // Slots are built so any combination still reads as a working double-entendre.
-  // level 0 = cheeky, 1 = salty, 2 = below deck. Higher levels unlock spicier slot-fills.
-  // Each template multiplies its slots; totals well over 1,000 unique names per level.
+  // Slots built so any combination reads as a working double-entendre.
+  // level 0 = cheeky, 1 = salty, 2 = below deck. Higher levels unlock spicier fills.
 
-  // -- shared nautical vocabulary, tiered by how suggestive it is --
+  // -- nautical / watery vocabulary, tiered --
   const naut = {
-    soft:["Buoy","Schooner","Dinghy","Marina","Galley","Tide","Wake","Bow","Helm","Sail","Anchor","Mast","Hull","Knot","Reef","Skipper","Current","Harbour","Breeze","Cove"],
-    mid:["Mast","Poop Deck","Stern","Aft","Rudder","Tiller","Rod","Tackle","Buoy","Keel","Riggin'","Mainsheet","Shaft","Berth","Winch","Tug","Bilge"],
-    spicy:["Aft Crack","Poop Chute","Stiff Mast","Wet Deck","Rear Berth","Bow Job","Stern Crack","Long Shaft","Tight Berth","Mizzen","Rod","Seamen"]
+    soft:["Buoy","Schooner","Dinghy","Marina","Galley","Tide","Wake","Bow","Helm","Sail","Anchor","Mast","Hull","Knot","Reef","Skipper","Current","Harbour","Breeze","Cove","Ducky","Paddle","Rudder","Compass","Barnacle","Guppy","Minnow","Skiff","Canoe","Pontoon"],
+    mid:["Mast","Poop Deck","Stern","Aft","Rudder","Tiller","Rod","Tackle","Buoy","Keel","Riggin'","Mainsheet","Shaft","Berth","Winch","Tug","Bilge","Dinghy","Paddle","Dipstick","Bunk","Hatch","Nozzle","Blowhole","Cockpit"],
+    spicy:["Aft Crack","Poop Chute","Stiff Mast","Wet Deck","Rear Berth","Stern Crack","Long Shaft","Tight Berth","Mizzen","Dinghy","Nozzle","Cockpit","Blowhole","Dipstick","Wide Beam","Moist Hatch","Back Berth"]
   };
 
   // -- "innocent" front words that hide a second meaning --
   const adj = {
-    0:["Salty","Nauti","Reel","Knotty","Foggy","Misty","Sandy","Lazy","Tipsy","Breezy","Wavy","Buoyant","High","Wet","Cool"],
-    1:["Stiff","Hard","Wet","Loose","Deep","Long","Wide","Slippery","Heavy","Throbbin'","Bouncin'","Quiverin'","Sloppy","Bareback","Naughty"],
-    2:["Throbbin'","Bulging","Stiff","Dripping","Gaping","Moist","Greasy","Swollen","Pulsing","Bareback","Filthy","Sloppy","Aching","Bottomless","Reekin'"]
+    0:["Salty","Nauti","Reel","Knotty","Foggy","Misty","Sandy","Lazy","Tipsy","Breezy","Wavy","Buoyant","High","Wet","Cool","Frisky","Cheeky","Rubber","Slippery","Bouncy","Perky","Wobbly","Jolly","Randy","Cozy"],
+    1:["Stiff","Hard","Wet","Loose","Deep","Long","Wide","Slippery","Heavy","Throbbin'","Bouncin'","Quiverin'","Sloppy","Bareback","Naughty","Frisky","Randy","Swollen","Greasy","Rigid","Bulging","Steamy","Rear","Firm","Puffy"],
+    2:["Throbbin'","Bulging","Stiff","Dripping","Gaping","Moist","Greasy","Swollen","Pulsing","Bareback","Filthy","Sloppy","Aching","Bottomless","Reekin'","Rigid","Slippery","Steamy","Heaving","Quiverin'","Rammed","Puffy","Rear","Oily","Sticky"]
   };
 
-  // -- pun "first names" / persons --
+  // -- rude-sounding nouns (the payload of the pun) --
+  const naughtyNoun = {
+    0:["Bottom","Booty","Buns","Cheeks","Rump","Behind","Caboose","Bits","Bosom","Knockers","Melons","Dumplings","Wobblers","Bloomers","Knickers","Trunks","Tush","Fanny","Keister","Duff"],
+    1:["Booty","Buns","Caboose","Junk","Package","Melons","Knockers","Hooters","Jugs","Wood","Woody","Trouser Trout","Love Muscle","Fun Bags","Nether Regions","Backside","Bum","Rack","Undercarriage","Bishop"],
+    2:["Junk","Package","Wood","Woody","Trouser Trout","Love Muscle","Bishop","Trouser Snake","Beaver","Muff","Rack","Melons","Cheeks","Backdoor","Undercarriage","Meat & Two Veg","Todger","Knob","Wanger","Schlong"]
+  };
+
+  // -- pun "persons" (kept subtle/clever, dropped the crude ones) --
   const persons = {
-    0:["Salty Seaman","Sir Osis","Cap'n Obvious","Ol' Barnacle","Reel McCoy","Skipper","First Mate","Sea Dog","Mister Tibbs"],
-    1:["Master Baiter","Rear Admiral","Seaman Staines","Dick Trickle","Mike Hunt","Phil McCrackin","Hugh Jardon","Master Bates","Ben Dover","Pearl Diver"],
-    2:["Master Baiter","Mike Hunt","Phil McCrackin","Hugh Jardon","Ben Dover","Seaman Stains","Dick Pound","Holden McGroin","Wayne Kerr","Buster Hymen"]
+    0:["Salty Skipper","Sir Osis","Cap'n Obvious","Ol' Barnacle","Reel McCoy","Wandering Willy","Randy Skipper","Sir Reels-a-Lot","Cap'n Crunch"],
+    1:["Wayne Kerr","Rear Admiral","Pearl Diver","Randy Roger","Long John","Willy Makeit","Rusty Trombone","Sir Loin","Chester Drawers","Rod Steele"],
+    2:["Wayne Kerr","Rod Steele","Long John","Rusty Trombone","Randy Roger","Dick Van Dyke-ish Rod","Peter Longfellow","Woody Johnson","Rod Holder","Harry Sack"]
   };
 
-  // -- verbs/actions (gerunds) that double as something rude --
+  // -- verbs/actions (gerunds/imperatives) --
   const verb = {
-    0:["Bobbin'","Cruisin'","Driftin'","Splashin'","Reelin'","Knottin'","Sailin'","Trollin'","Anchored"],
-    1:["Tug","Stroke","Pull","Crank","Yank","Bait","Mount","Ride","Bang","Pound","Spank","Grind","Stuff"],
-    2:["Pound","Bang","Stuff","Ram","Drill","Grind","Slap","Stroke","Yank","Plow","Mount","Squeeze","Hammer"]
+    0:["Bobbin'","Cruisin'","Driftin'","Splashin'","Reelin'","Sailin'","Trollin'","Ticklin'","Squeezin'","Jigglin'","Bouncin'","Teasin'"],
+    1:["Tug","Stroke","Pull","Crank","Yank","Bait","Mount","Ride","Bang","Spank","Grind","Stuff","Rub","Squeeze","Jiggle","Fondle","Grease"],
+    2:["Pound","Bang","Stuff","Ram","Drill","Grind","Slap","Stroke","Yank","Plow","Mount","Squeeze","Hammer","Rub","Wax","Fondle","Grease"]
   };
 
-  // -- nouns to receive a verb --
+  // -- objects for verbs --
   const obj = {
-    0:["the Buoy","the Mast","the Dinghy","the Riggin'","the Anchor","the Tackle","the Wake","the Tide"],
-    1:["the Mast","the Riggin'","the Shaft","the Buoys","the Tackle","the Berth","the Stern","the Rod","the Winch","the Poop Deck"],
-    2:["the Poop Chute","the Stern","the Aft Crack","the Buoys","the Shaft","the Berth","the Riggin'","the Wet Deck","the Tackle"]
+    0:["the Buoy","the Ducky","the Dinghy","the Riggin'","the Anchor","the Paddle","the Tackle","the Wobblers","the Melons","the Bloomers"],
+    1:["the Mast","the Riggin'","the Shaft","the Buoys","the Tackle","the Bishop","the Woody","the Package","the Trouser Trout","the Dinghy","the Nozzle"],
+    2:["the Bishop","the Trouser Trout","the Beaver","the Package","the Shaft","the Muff","the Wood","the Todger","the Knob","the Undercarriage"]
   };
 
-  // -- standalone "reel/sea/knot/buoy" word-play pairs (the groaner kind) --
-  const groanLead = ["Reel","Sea","Knot","Buoy","Aqua","Nauti","Pier","Hull","Sail","Wave","Dock","Ship"];
+  // -- groaner word-play pairs --
+  const groanLead = ["Reel","Sea","Knot","Buoy","Aqua","Nauti","Pier","Hull","Sail","Wave","Dock","Ship","Bass","Cod","Fin","Shore","Ferry","Oar"];
   const groanTail = {
-    0:["Lucky","Therapy","Tease","Happy","Big Deal","Talker","Review","Yeah","La Vie","Goodbye","Holic","Senorita","Pressure","Working","Steal","Deal","Affair","Note"],
-    1:["Hooker","Stiff One","Big One","Tug","Deep","Hard","Tease","Banger","Stroker","Pleaser","Hungry","Loose","Slick","Wet"],
-    2:["Hooker","Banger","Stuffer","Pounder","Stroker","Squeezer","Hard-On","Pleaser","Filth","Slut","Tease","Plower","Drilla"]
+    0:["Lucky","Therapy","Tease","Happy","Big Deal","Talker","Review","Yeah","La Vie","Goodbye","Holic","Senorita","Pressure","Working","Steal","Deal","Affair","Note","Naughty","Frisky","Tickler"],
+    1:["Hooker","Stiff One","Big One","Tug","Deep","Hard","Tease","Banger","Stroker","Pleaser","Hungry","Loose","Slick","Wet","Randy","Naughty","Rubber","Squeezer","Tickler","Bandit"],
+    2:["Hooker","Banger","Stuffer","Pounder","Stroker","Squeezer","Hard-On","Pleaser","Filth","Tease","Plower","Drilla","Rammer","Grinder","Slapper","Randy","Beaver","Muncher"]
   };
 
-  // -- tier helper: pull a naut word appropriate to level --
+  // -- "Rubb'er ___" and similar apostrophe-innuendo builders --
+  const rubberVerb = ["Rubb","Squeez","Spank","Tickl","Grab","Slapp","Grop","Fondl","Pok","Pinch","Jiggl","Lick"];
+  const rubberNoun = {
+    0:["er Ducky","er Buns","er Melons","er Bottom","er Wobblers","er Bloomers","er Behind","er Buoys","er Dinghy","er Cheeks"],
+    1:["er Melons","er Buoys","er Package","er Woody","er Rack","er Bishop","er Junk","er Trout","er Knockers","er Backside"],
+    2:["er Beaver","er Bishop","er Package","er Muff","er Wood","er Knob","er Rack","er Todger","er Undercarriage","er Trout"]
+  };
+
+  // -- tier helper --
   function nautFor(lvl){
     if(lvl===0) return pick(naut.soft);
     if(lvl===1) return pick([...naut.soft, ...naut.mid]);
     return pick([...naut.mid, ...naut.spicy]);
   }
 
-  // ---- templates: each returns a 1-3 word name. Built to always read as a pun. ----
+  // ---- templates ----
   const templates = [
-    (l)=> `${pick(adj[l])} ${nautFor(l)}`,                       // Stiff Mast, Salty Buoy
-    (l)=> `${pick(adj[l])} & ${pick(["Wild","Salty","Loose","Stiff","Ready","Willing","Hard","Reckless"])}`, // Wet & Wild, Stiff & Ready
-    (l)=> `${pick(groanLead)} ${pick(groanTail[l])}`,           // Reel Hooker, Knot Lucky, Buoy Banger
-    (l)=> `${pick(verb[l])} ${obj[l] ? pick(obj[l]) : 'the Mast'}`, // Pound the Poop Chute, Tug the Riggin'
-    (l)=> `${pick(persons[l])}`,                                 // Master Baiter, Mike Hunt
-    (l)=> `${pick(adj[l])} ${pick(persons[l]).split(' ')[0]}`,  // Stiff Seaman, Salty Dick
-    (l)=> `${pick(["Master","Hard","Wet","Stiff","Deep","Long","Reel"])} ${pick(["Baiter","Stroker","Shaft","Seaman","Tugger","Banger","Pleaser","Diver"])}`,
-    (l)=> `${nautFor(l)} ${pick(["McSqueeze","O'Tool","von Tugger","McStroke","Longshaft","McHard","O'Riley","McSeaman"])}`,
-    (l)=> `${pick(["Two","Three","Quick","Four"])} ${pick(["Pumps","Strokes","Knots","Tugs","Yanks","Pulls"])}`,
-    (l)=> `${pick(["Wax","Choke","Hoist","Grip","Polish","Crank","Pull"])} the ${pick(["Mast","Mainsail","Shaft","Anchor","Riggin'","Rod","Halyard"])}`
+    (l)=> `${pick(adj[l])} ${nautFor(l)}`,                         // Rubber Dinghy, Stiff Mast
+    (l)=> `${pick(adj[l])} ${pick(naughtyNoun[l])}`,               // Wet Wobblers, Bouncy Buns
+    (l)=> `${pick(adj[l])} & ${pick(["Wild","Salty","Loose","Stiff","Ready","Willing","Hard","Reckless","Bothered","Randy"])}`, // Wet & Wild
+    (l)=> `${pick(groanLead)} ${pick(groanTail[l])}`,              // Reel Hooker, Knot Naughty
+    (l)=> `${pick(verb[l])} ${pick(obj[l])}`,                      // Squeeze the Melons, Tug the Bishop
+    (l)=> `${pick(persons[l])}`,                                   // Wayne Kerr, Rear Admiral
+    (l)=> `${pick(rubberVerb)}'${pick(rubberNoun[l])}`,           // Rubb'er Ducky, Squeez'er Melons
+    (l)=> `${pick(adj[l])} ${pick(["Bandit","Baron","Captain","Cowboy","Wizard","Warrior","Beast","Machine","King","Legend"])}`, // Wet Bandit
+    (l)=> `${nautFor(l)} ${pick(["McSqueeze","O'Tool","von Tickle","McStroke","McNaughty","McHard","O'Riley","McFrisky","O'Grady","McKnob"])}`,
+    (l)=> { const n=pick(["Two","Three","Quick","Four"]); const w=pick(["Pumps","Strokes","Knots","Tugs","Yanks","Pulls","Squeezes","Jiggles"]); return `${n} ${w}`; },
+    (l)=> `${pick(["Wax","Choke","Hoist","Grip","Polish","Crank","Pull","Stroke","Grease"])} the ${pick(["Mast","Mainsail","Shaft","Anchor","Riggin'","Rod","Halyard","Dinghy","Nozzle"])}`,
+    (l)=> `${pick(["Blow","Poop","Rear","Aft","Wet","Back"])} ${pick(["Hole","Deck","Berth","Hatch","End","Door"])}`.replace(/^Blow Hole$/,'Blowhole')
   ];
 
   // explainer hints — the "oh no" once you read it. Keyed loosely by feel.
